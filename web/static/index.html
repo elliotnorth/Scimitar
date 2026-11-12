@@ -12,8 +12,15 @@
   <h1>Scimitar</h1>
   <div id="summary" class="summary"></div>
   <div id="updated" class="updated"></div>
+  <button id="logout" hidden>Log out</button>
 </header>
-<main>
+<form id="login" class="card login" hidden>
+  <h2>Log in</h2>
+  <input id="password" type="password" autocomplete="current-password" placeholder="Admin password" required>
+  <button class="primary" type="submit">Log in</button>
+  <div id="login-error" class="login-error"></div>
+</form>
+<main id="app" hidden>
   <div id="errors"></div>
   <section id="review-section" hidden>
     <h2>Needs review <span id="review-count" class="count"></span></h2>

@@ -30,6 +30,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -155,6 +156,24 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 .details dt { color: var(--muted); }
 .details dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.login {
+  max-width: 340px;
+  margin: 15vh auto 0;
+  padding: 20px;
+  display: grid;
+  gap: 10px;
+}
+.login h2 { margin: 0 0 4px; }
+.login input {
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.login-error { color: var(--down); min-height: 1.2em; font-size: 13px; }
 
 .empty { color: var(--muted); padding: 12px 0; }
 

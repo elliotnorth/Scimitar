@@ -28,7 +28,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Listen != "127.0.0.1:8080" || cfg.StateFile != "scimitar-decisions.json" || cfg.discoverEvery() != 5*time.Minute || cfg.statusEvery() != 30*time.Second {
+	if cfg.Listen != "127.0.0.1:8080" || cfg.DataDir != "scimitar-data" || cfg.discoverEvery() != 5*time.Minute || cfg.statusEvery() != 30*time.Second {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 }

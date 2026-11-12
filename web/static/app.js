@@ -28,21 +28,41 @@ function dot(status) {
   return el("span", { class: `dot ${status}`, title: status });
 }
 
-async function getJSON(url) {
-  const res = await fetch(url);
+class LoginRequired extends Error {}
+
+function showLogin(visible) {
+  document.getElementById("login").hidden = !visible;
+  document.getElementById("app").hidden = visible;
+  document.getElementById("logout").hidden = visible;
+  if (visible) document.getElementById("password").focus();
+}
+
+async function checked(res) {
+  if (res.status === 401) {
+    showLogin(true);
+    throw new LoginRequired();
+  }
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
-  return res.json();
+  return res;
+}
+
+async function getJSON(url) {
+  return (await checked(await fetch(url))).json();
+}
+
+function postJSON(url, body) {
+  return fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 async function decide(key, catalogID) {
-  const res = await fetch("api/review", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ key, catalog_id: catalogID }),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    alert(`Could not save: ${body.error || res.statusText}`);
+  try {
+    await checked(await postJSON("api/review", { key, catalog_id: catalogID }));
+  } catch (err) {
+    if (!(err instanceof LoginRequired)) alert(`Could not save: ${err.message}`);
   }
   await refresh();
 }
@@ -212,17 +232,36 @@ function render() {
 
 async function refresh() {
   try {
+    if (!state.catalog.length) state.catalog = await getJSON("api/catalog");
     state.snapshot = await getJSON("api/snapshot");
+    showLogin(false);
     render();
   } catch (err) {
+    if (err instanceof LoginRequired) return;
     document.getElementById("errors").replaceChildren(el("div", { class: "error" }, `Scimitar is unreachable: ${err.message}`));
   }
 }
 
-async function start() {
-  state.catalog = await getJSON("api/catalog").catch(() => []);
-  await refresh();
-  setInterval(refresh, REFRESH_MS);
-}
+document.getElementById("login").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = document.getElementById("password");
+  const message = document.getElementById("login-error");
+  const res = await postJSON("api/login", { password: input.value });
+  if (res.ok) {
+    input.value = "";
+    message.textContent = "";
+    await refresh();
+  } else {
+    message.textContent = res.status === 401 ? "Wrong password." : "Login failed.";
+  }
+});
 
-start();
+document.getElementById("logout").addEventListener("click", async () => {
+  await postJSON("api/logout", {});
+  state.snapshot = null;
+  state.openDetails.clear();
+  showLogin(true);
+});
+
+refresh();
+setInterval(refresh, REFRESH_MS);

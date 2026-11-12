@@ -12,6 +12,7 @@ internal/domain/      Device, Service, Link, Status, Provider interface
 internal/core/        inventory, service matching, review queue
 internal/providers/   one package per data source (proxmox first)
 internal/api/         HTTP handlers
+internal/auth/        admin password and sessions
 web/                  UI, embedded into the binary
 docs/                 short guides
 hooks/                git hooks
@@ -25,7 +26,7 @@ go build -o scimitar ./cmd/scimitar
 ./scimitar -config scimitar.json
 ```
 
-Then open http://127.0.0.1:8080.
+Then open https://127.0.0.1:8080 and log in with the admin password printed on first start.
 
 See [docs/config.md](docs/config.md) and [docs/proxmox.md](docs/proxmox.md).
 

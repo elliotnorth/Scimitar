@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
-	"mime"
 	"net/http"
 
 	"github.com/elliotnorth/Scimitar/internal/core"
@@ -43,14 +42,8 @@ type reviewRequest struct {
 }
 
 func (h handlers) review(w http.ResponseWriter, r *http.Request) {
-	// Requiring a JSON content type forces a CORS preflight, so other sites cannot submit decisions from a browser.
-	if mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type")); mediaType != "application/json" {
-		writeError(w, http.StatusUnsupportedMediaType, "content type must be application/json")
-		return
-	}
 	var req reviewRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid json")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	err := h.inv.Decide(req.Key, req.CatalogID)

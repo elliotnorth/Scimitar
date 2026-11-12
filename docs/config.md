@@ -5,7 +5,7 @@ Scimitar reads one JSON file, `scimitar.json` by default. Pass another path with
 ```json
 {
   "listen": "127.0.0.1:8080",
-  "state_file": "/var/lib/scimitar/decisions.json",
+  "data_dir": "/var/lib/scimitar",
   "discover_seconds": 300,
   "status_seconds": 30,
   "providers": [
@@ -25,13 +25,19 @@ Scimitar reads one JSON file, `scimitar.json` by default. Pass another path with
 
 | Field | Default | Meaning |
 |---|---|---|
-| `listen` | `127.0.0.1:8080` | address for the web page. Only this machine can reach it by default |
-| `state_file` | `scimitar-decisions.json` | where your review decisions are kept |
+| `listen` | `127.0.0.1:8080` | address for the web page. Only this machine can reach it by default. Use `0.0.0.0:8080` for your LAN |
+| `data_dir` | `scimitar-data` | review decisions, password hash and TLS certificate |
 | `discover_seconds` | `300` | how often to rediscover devices and services |
 | `status_seconds` | `30` | how often to refresh up/down status |
 | `providers` | required | data sources, see below |
 
 The file holds an API token secret. Make it readable only by the user running Scimitar: `chmod 600 scimitar.json`.
+
+## Login and HTTPS
+
+On first start Scimitar prints an admin password once and keeps only its hash in `data_dir/auth.json`. To get a new password, run `scimitar -config scimitar.json reset-password` and restart.
+
+The page is served over HTTPS only. On first start Scimitar creates a self-signed certificate in `data_dir` and logs its SHA-256 fingerprint. Compare it with the one your browser shows before you accept the certificate. To use your own certificate, replace `cert.pem` and `key.pem` in `data_dir`.
 
 ## Providers
 

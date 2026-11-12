@@ -39,9 +39,42 @@ func (f *fakeInventory) Details(context.Context, string) ([]domain.Detail, error
 	return f.details, f.detailErr
 }
 
-func newTestHandler(inv *fakeInventory) http.Handler {
+type fakeAuth struct {
+	loggedOut string
+}
+
+const (
+	testPassword = "correct horse"
+	testToken    = "session-token"
+)
+
+func (f *fakeAuth) Login(password string) (string, bool, error) {
+	if password != testPassword {
+		return "", false, nil
+	}
+	return testToken, true, nil
+}
+
+func (f *fakeAuth) Valid(token string) bool { return token == testToken }
+
+func (f *fakeAuth) Logout(token string) { f.loggedOut = token }
+
+func (f *fakeAuth) SessionTTL() time.Duration { return time.Hour }
+
+func newTestHandlerWithAuth(inv *fakeInventory, auth *fakeAuth) http.Handler {
 	ui := fstest.MapFS{"index.html": {Data: []byte("<!doctype html><title>Scimitar</title>")}}
-	return NewHandler(inv, ui)
+	return NewHandler(inv, auth, ui)
+}
+
+func newTestHandler(inv *fakeInventory) http.Handler {
+	return withSession{newTestHandlerWithAuth(inv, &fakeAuth{})}
+}
+
+type withSession struct{ next http.Handler }
+
+func (s withSession) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r.AddCookie(&http.Cookie{Name: sessionCookie, Value: testToken})
+	s.next.ServeHTTP(w, r)
 }
 
 func do(t *testing.T, h http.Handler, method, target, contentType, body string) *httptest.ResponseRecorder {
