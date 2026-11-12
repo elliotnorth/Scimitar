@@ -64,7 +64,7 @@ func TestAddDevice(t *testing.T) {
 		t.Fatalf("%v\n%s", err, ta.ti.out)
 	}
 	out := ta.ti.out.String()
-	for _, want := range []string{"class read-only authentication ssh-ed25519 \"ssh-ed25519 ", testHostKey, "EX3400-48P running Junos 23.4R2", "Added core-sw.home.lan"} {
+	for _, want := range []string{"set system login user scimitar authentication ssh-ed25519 \"ssh-ed25519 ", testHostKey, "EX3400-48P running Junos 23.4R2", "Added core-sw.home.lan"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q:\n%s", want, out)
 		}

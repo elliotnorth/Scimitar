@@ -14,10 +14,13 @@ It prints a few lines to paste into the device's CLI:
 
 ```
 configure
-set system login user scimitar class read-only authentication ssh-ed25519 "ssh-ed25519 AAAA... scimitar"
+set system login user scimitar class read-only
+set system login user scimitar authentication ssh-ed25519 "ssh-ed25519 AAAA... scimitar"
 set protocols lldp interface all
 commit and-quit
 ```
+
+If a long pasted line breaks, type `load set terminal` after `configure`, paste the `set` lines, press Ctrl+D, then `commit and-quit`.
 
 The `read-only` login class cannot change the configuration. The LLDP line lets Scimitar see what is plugged into each port; leave it out if LLDP is already on.
 

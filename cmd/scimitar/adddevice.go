@@ -55,9 +55,12 @@ func (a deviceAdder) add(ctx context.Context) error {
 	a.say("Add a Juniper device (EX, SRX, QFX or MX)\n")
 	a.say("1. On the device, give Scimitar a read-only login. Paste these lines into its CLI:\n")
 	a.say("  configure")
-	a.say("  set system login user scimitar class read-only authentication ssh-ed25519 \"%s\"", sshkey.AuthorizedKey(signer))
+	a.say("  set system login user scimitar class read-only")
+	a.say("  set system login user scimitar authentication ssh-ed25519 \"%s\"", sshkey.AuthorizedKey(signer))
 	a.say("  set protocols lldp interface all")
 	a.say("  commit and-quit\n")
+	a.say("If a pasted line breaks, type \"load set terminal\" after configure, paste the set lines,")
+	a.say("press Ctrl+D, then commit and-quit.\n")
 	a.say("The read-only class cannot change anything. The lldp line lets Scimitar see what is")
 	a.say("plugged into each port; skip it if LLDP is already on.\n")
 	if _, err := a.ask("Press Enter when you have committed it", ""); err != nil {
