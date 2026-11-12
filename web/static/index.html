@@ -10,38 +10,50 @@
 </head>
 <body>
 <div id="login-screen" class="login-screen" hidden>
-  <form id="login" class="login-card">
-    <img src="favicon.svg" alt="" class="login-logo">
-    <h1>Log in to Scimitar</h1>
-    <p class="muted">Use the admin password from setup.</p>
+  <form id="login" class="login-card panel">
+    <pre class="login-logo" aria-label="Scimitar">███████╗ ██████╗██╗███╗   ███╗██╗████████╗ █████╗ ██████╗
+██╔════╝██╔════╝██║████╗ ████║██║╚══██╔══╝██╔══██╗██╔══██╗
+███████╗██║     ██║██╔████╔██║██║   ██║   ███████║██████╔╝
+╚════██║██║     ██║██║╚██╔╝██║██║   ██║   ██╔══██║██╔══██╗
+███████║╚██████╗██║██║ ╚═╝ ██║██║   ██║   ██║  ██║██║  ██║
+╚══════╝ ╚═════╝╚═╝╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝</pre>
+    <h1 class="title-2">Log in</h1>
     <label class="field">
-      <span>Password</span>
+      <span class="cap">password</span>
       <input id="password" type="password" autocomplete="current-password" required>
     </label>
-    <button class="btn btn-primary btn-block" type="submit">Log in</button>
+    <button class="btn go block" type="submit">log in</button>
     <p id="login-error" class="form-error" role="alert"></p>
-    <p class="muted small">Forgot it? Run <code>sudo scimitar reset-password</code> on the server.</p>
+    <p class="dim small">Forgot it? Run <code>sudo scimitar reset-password</code> on the server.</p>
   </form>
 </div>
 
 <div id="shell" hidden>
-  <header class="header">
-    <div class="container header-row">
-      <a class="brand" href="#/devices"><img src="favicon.svg" alt="">Scimitar</a>
-      <div class="header-right">
-        <span id="updated" class="muted small"></span>
-        <button id="logout" class="btn btn-ghost btn-small" type="button">Log out</button>
-      </div>
-    </div>
-    <nav class="container tabs" aria-label="Sections">
-      <a href="#/devices" data-tab="devices">Devices</a>
-      <a href="#/services" data-tab="services">Services</a>
-      <a href="#/review" data-tab="review">Review <span id="review-badge" class="tab-badge" hidden></span></a>
-      <a href="#/settings" data-tab="settings">Settings</a>
-    </nav>
-  </header>
-  <div id="banner" class="container"></div>
-  <main id="view" class="container"></main>
+  <div class="wrap">
+    <header class="hdr">
+      <a class="brand" href="#/overview">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M6 26C14 24 24 16 27 4c-6 6-13 11-22 14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 22l6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" opacity="0.5"/></svg>
+        scimitar
+      </a>
+      <nav class="nav" aria-label="Pages">
+        <a href="#/overview" data-tab="overview">overview</a>
+        <a href="#/apps" data-tab="apps">apps</a>
+        <a href="#/devices" data-tab="devices">devices</a>
+        <a href="#/review" data-tab="review">review<span id="review-badge" class="badge" hidden></span></a>
+        <a href="#/settings" data-tab="settings">settings</a>
+      </nav>
+      <span id="live" class="live"><span class="live-dot"></span><span id="live-text">live</span></span>
+    </header>
+  </div>
+  <div id="banner" class="wrap"></div>
+  <main id="view"></main>
+  <div class="wrap">
+    <footer class="foot">
+      <span class="foot-name">scimitar</span>
+      <span id="version" class="mono dim small"></span>
+      <span class="mono faint small hide-sm">/ search · 1-5 pages</span>
+    </footer>
+  </div>
 </div>
 
 <div id="toasts" class="toasts" aria-live="polite"></div>

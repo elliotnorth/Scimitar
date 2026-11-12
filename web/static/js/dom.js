@@ -1,5 +1,3 @@
-const SVG_NS = "http://www.w3.org/2000/svg";
-
 export function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs)) {
@@ -19,74 +17,56 @@ function append(node, children) {
   }
 }
 
-export function searchIcon() {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("width", "15");
-  svg.setAttribute("height", "15");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("stroke", "currentColor");
-  svg.setAttribute("stroke-width", "2");
-  const circle = document.createElementNS(SVG_NS, "circle");
-  circle.setAttribute("cx", "11");
-  circle.setAttribute("cy", "11");
-  circle.setAttribute("r", "7");
-  const line = document.createElementNS(SVG_NS, "path");
-  line.setAttribute("d", "M20 20l-3.5-3.5");
-  line.setAttribute("stroke-linecap", "round");
-  svg.append(circle, line);
-  return svg;
+// panel is a bordered frame with small squares on its corners.
+export function panel(attrs, ...children) {
+  return el(
+    "div",
+    { ...attrs, class: `panel ${attrs.class || ""}`.trim() },
+    ["tl", "tr", "bl", "br"].map((corner) => el("span", { class: `tick ${corner}`, "aria-hidden": "true" })),
+    children,
+  );
 }
 
-const STATUS_LABELS = { up: "Up", down: "Down", unknown: "Unknown" };
-
-export function statusBadge(status) {
-  return el("span", { class: "status" }, el("span", { class: `dot ${status}` }), STATUS_LABELS[status] || status);
+export function state(status) {
+  return el("span", { class: `state ${status}` }, "● ", status);
 }
 
-export function statusPill(status, label) {
-  return el("span", { class: "pill", title: STATUS_LABELS[status] }, el("span", { class: `dot ${status}` }), label);
-}
-
-const KIND_LABELS = { host: "Host", vm: "Virtual machine", container: "Container", appliance: "Appliance" };
+const KIND_LABELS = { host: "host", vm: "vm", container: "container", appliance: "appliance" };
 
 export function kindLabel(kind) {
   return KIND_LABELS[kind] || kind;
 }
 
-export function emptyState(title, text) {
-  return el("div", { class: "empty" }, el("h3", {}, title), el("p", {}, text));
+export function pageTitle(text, ...after) {
+  return el("div", { class: "page-head" }, el("h1", { class: "title" }, text), after);
 }
 
-export function dataTable(columns, rows) {
-  return el(
-    "div",
-    { class: "table-wrap" },
-    el(
-      "table",
-      {},
-      el("thead", {}, el("tr", {}, columns.map((c) => el("th", { class: c.class }, c.label)))),
-      el("tbody", {}, rows),
-    ),
-  );
+export function emptyState(title, text) {
+  return el("div", { class: "empty" }, el("div", { class: "empty-title" }, title), el("p", {}, text));
 }
 
 export function searchBox(placeholder, value, oninput) {
   return el(
     "label",
     { class: "search" },
-    searchIcon(),
+    el("span", { class: "search-key", "aria-hidden": "true" }, "/"),
     el("input", { type: "search", placeholder, value, "data-search": true, "aria-label": placeholder, oninput }),
-    el("kbd", {}, "/"),
   );
 }
 
-export function select(options, value, onchange, label) {
+export function chips(options, value, onpick, label) {
   return el(
-    "select",
-    { "aria-label": label, onchange },
-    options.map(([v, text]) => el("option", { value: v, selected: v === value }, text)),
+    "div",
+    { class: "chips", role: "group", "aria-label": label },
+    options.map(([v, text]) =>
+      el("button", { type: "button", class: v === value ? "chip on" : "chip", "aria-pressed": String(v === value), onclick: () => onpick(v) }, text),
+    ),
   );
+}
+
+export function bar(fraction, width) {
+  const filled = Math.round(Math.max(0, Math.min(1, fraction)) * width);
+  return "█".repeat(filled) + "░".repeat(width - filled);
 }
 
 export function relativeTime(date) {
