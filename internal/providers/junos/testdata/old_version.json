@@ -1,0 +1,14 @@
+{
+    "software-information" : [
+    {
+        "host-name" : [{"data" : "old-ex"}],
+        "product-model" : [{"data" : "ex2200-c-12p-2g"}],
+        "package-information" : [
+        {
+            "name" : [{"data" : "junos"}],
+            "comment" : [{"data" : "JUNOS EX  Software Suite [12.3R12.4]"}]
+        }
+        ]
+    }
+    ]
+}

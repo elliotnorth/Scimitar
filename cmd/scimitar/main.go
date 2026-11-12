@@ -18,6 +18,8 @@ const usage = `usage: scimitar [-config path] [command]
 commands:
   (none)           run Scimitar
   install          set up Scimitar as a service on this machine
+  add-device       add a Juniper switch, firewall or router
+  ssh-key          print the SSH key Scimitar uses to log in to devices
   status           show whether Scimitar is running and where to open it
   update           install the newest release
   reset-password   create a new admin password
@@ -58,6 +60,14 @@ func dispatch(command, configPath string) error {
 		return nil
 	case "reset-password":
 		return resetPassword(configPath)
+	case "ssh-key":
+		return printSSHKey(configPath)
+	case "add-device":
+		if os.Geteuid() != 0 && configPath == systemPaths.configFile() {
+			return errors.New("add-device needs root: sudo scimitar add-device")
+		}
+		adder := newDeviceAdder(prompter{in: bufio.NewReader(os.Stdin), out: os.Stdout}, realSystem(), configPath)
+		return adder.add(context.Background())
 	case "install", "uninstall", "update":
 		if os.Geteuid() != 0 {
 			return fmt.Errorf("%s needs root: sudo scimitar %s", command, command)

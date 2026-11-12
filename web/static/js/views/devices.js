@@ -2,6 +2,7 @@ import { byName, chips, el, emptyState, kindLabel, matches, pageTitle, panel, se
 import { deviceHref, store } from "../store.js";
 
 const filters = { query: "", status: "" };
+const NETWORK_KINDS = new Set(["switch", "firewall", "router"]);
 const STATUS_OPTIONS = [["", "all"], ["up", "up"], ["down", "down"], ["unknown", "unknown"]];
 
 export function devicesView() {
@@ -56,7 +57,10 @@ export function devicesView() {
       );
     }
     const loose = devices.filter((d) => !parentOf.has(d.id) && !childrenOf.has(d.id) && d.kind !== "host" && shown(d)).sort(byName);
-    if (loose.length) groups.push(panel({ class: "rows" }, loose.map((d) => deviceRow(d, "", `${kindLabel(d.kind)} · ${d.provider}`))));
+    const gear = loose.filter((d) => NETWORK_KINDS.has(d.kind));
+    const other = loose.filter((d) => !NETWORK_KINDS.has(d.kind));
+    if (gear.length) groups.push(el("section", {}, el("div", { class: "cap section-cap" }, "network"), panel({ class: "rows" }, gear.map((d) => deviceRow(d, "", kindLabel(d.kind))))));
+    if (other.length) groups.push(panel({ class: "rows" }, other.map((d) => deviceRow(d, "", `${kindLabel(d.kind)} · ${d.provider}`))));
     results.replaceChildren(...(groups.length ? groups : [emptyState("Nothing matches", "Try a different search or filter.")]));
   }
 

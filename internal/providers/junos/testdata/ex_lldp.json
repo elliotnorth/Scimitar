@@ -1,0 +1,26 @@
+{
+    "lldp-neighbors-information" : [
+    {
+        "lldp-neighbor-information" : [
+        {
+            "lldp-local-port-id" : [{"data" : "ge-0/0/0"}],
+            "lldp-local-parent-interface-name" : [{"data" : "-"}],
+            "lldp-remote-chassis-id-subtype" : [{"data" : "Mac address"}],
+            "lldp-remote-chassis-id" : [{"data" : "aa:bb:cc:dd:ee:ff"}],
+            "lldp-remote-port-description" : [{"data" : "eno1"}],
+            "lldp-remote-system-name" : [{"data" : "pve.home.lan"}]
+        },
+        {
+            "lldp-local-port-id" : [{"data" : "xe-0/2/0"}],
+            "lldp-remote-port-id" : [{"data" : "xe-0/0/1"}],
+            "lldp-remote-system-name" : [{"data" : "srx"}]
+        },
+        {
+            "lldp-local-interface" : [{"data" : "ge-0/0/2"}],
+            "lldp-remote-port-id" : [{"data" : "1"}],
+            "lldp-remote-system-name" : [{"data" : "srx"}]
+        }
+        ]
+    }
+    ]
+}

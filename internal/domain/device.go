@@ -7,6 +7,9 @@ const (
 	DeviceVM        DeviceKind = "vm"
 	DeviceContainer DeviceKind = "container"
 	DeviceAppliance DeviceKind = "appliance"
+	DeviceSwitch    DeviceKind = "switch"
+	DeviceFirewall  DeviceKind = "firewall"
+	DeviceRouter    DeviceKind = "router"
 )
 
 type Device struct {

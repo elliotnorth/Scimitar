@@ -1,0 +1,20 @@
+{
+    "interface-information" : [
+    {
+        "physical-interface" : [
+        {
+            "name" : [{"data" : "ge-0/0/0"}],
+            "admin-status" : [{"data" : "up"}],
+            "oper-status" : [{"data" : "up"}],
+            "description" : [{"data" : "pve mgmt"}]
+        },
+        {
+            "name" : [{"data" : "ge-0/0/1"}],
+            "admin-status" : [{"data" : "down"}],
+            "oper-status" : [{"data" : "down"}],
+            "description" : [{"data" : "guest desk"}]
+        }
+        ]
+    }
+    ]
+}

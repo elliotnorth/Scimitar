@@ -173,21 +173,23 @@ func (i installer) writeConfig(listen string, pve proxmox.Config) error {
 	if err != nil {
 		return err
 	}
+	providers := []providerConfig{{Type: "proxmox", Settings: settings}}
+	// Reinstalling replaces the Proxmox settings but keeps devices added with add-device.
+	if old, err := loadConfig(i.paths.configFile()); err == nil {
+		for _, p := range old.Providers {
+			if p.Type != "proxmox" {
+				providers = append(providers, p)
+			}
+		}
+	}
 	cfg := config{
 		Listen:          listen,
 		DataDir:         i.paths.dataDir,
 		DiscoverSeconds: 300,
 		StatusSeconds:   30,
-		Providers:       []providerConfig{{Type: "proxmox", Settings: settings}},
+		Providers:       providers,
 	}
-	data, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(i.paths.configDir, 0o700); err != nil {
-		return err
-	}
-	return os.WriteFile(i.paths.configFile(), append(data, '\n'), 0o600)
+	return saveConfig(i.paths.configFile(), cfg)
 }
 
 func (i installer) prepareData() (password, certFP string, err error) {
@@ -204,6 +206,9 @@ func (i installer) prepareData() (password, certFP string, err error) {
 		return "", "", err
 	}
 	owned := []string{string(i.paths.dataDir), i.paths.dataDir.auth(), i.paths.dataDir.cert(), i.paths.dataDir.key()}
+	if fileExists(i.paths.dataDir.sshKey()) {
+		owned = append(owned, i.paths.dataDir.sshKey())
+	}
 	if err := i.chownToService(owned...); err != nil {
 		return "", "", fmt.Errorf("set data ownership: %w", err)
 	}

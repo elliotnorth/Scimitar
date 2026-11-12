@@ -116,7 +116,7 @@ func TestInstallWithExistingToken(t *testing.T) {
 	if pve["url"] != srv.URL || pve["token_id"] != "scimitar@pve!scimitar" || pve["token_secret"] != "good-secret" || pve["fingerprint"] != wantFP {
 		t.Fatalf("proxmox settings: %v", pve)
 	}
-	if _, err := buildRegistry(cfg.Providers); err != nil {
+	if _, err := buildRegistry(cfg.Providers, cfg.DataDir); err != nil {
 		t.Fatalf("written config does not load: %v", err)
 	}
 

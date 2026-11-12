@@ -1,0 +1,10 @@
+{
+    "software-information" : [
+    {
+        "host-name" : [{"data" : "ex3400"}],
+        "product-model" : [{"data" : "ex3400-48p"}],
+        "product-name" : [{"data" : "ex3400-48p"}],
+        "junos-version" : [{"data" : "23.4R2-S2.1"}]
+    }
+    ]
+}

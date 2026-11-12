@@ -2,7 +2,7 @@
 
 A self-hosted command center for your homelab. One page that shows your hosts, VMs, devices and services, and whether each one is up.
 
-Version 1 connects to Proxmox VE read-only through a limited API token.
+It reads Proxmox VE through a limited API token, and Juniper switches and firewalls over SSH with a read-only login.
 
 ## Layout
 
@@ -10,7 +10,8 @@ Version 1 connects to Proxmox VE read-only through a limited API token.
 cmd/scimitar/         entry point
 internal/domain/      Device, Service, Link, Status, Provider interface
 internal/core/        inventory, service matching, review queue
-internal/providers/   one package per data source (proxmox first)
+internal/providers/   one package per data source (proxmox, junos)
+internal/sshkey/      the SSH key used to log in to devices
 internal/api/         HTTP handlers
 internal/auth/        admin password and sessions
 web/                  UI, embedded into the binary
@@ -26,7 +27,7 @@ scripts/              setup scripts
 curl -fsSL https://github.com/elliotnorth/Scimitar/releases/latest/download/install.sh | sh
 ```
 
-See [docs/install.md](docs/install.md). Settings are in [docs/config.md](docs/config.md), Proxmox token details in [docs/proxmox.md](docs/proxmox.md).
+See [docs/install.md](docs/install.md). Settings are in [docs/config.md](docs/config.md), Proxmox token details in [docs/proxmox.md](docs/proxmox.md), Juniper devices in [docs/junos.md](docs/junos.md).
 
 ## Develop
 

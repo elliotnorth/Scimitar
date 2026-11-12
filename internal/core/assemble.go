@@ -24,6 +24,7 @@ func (inv *Inventory) rebuild() {
 		next.Links = append(next.Links, state.discovery.Links...)
 		hints = append(hints, state.discovery.Hints...)
 	}
+	next.Links = resolveLinks(next.Links, next.Devices)
 
 	matched := Match(inv.catalog, hints)
 	matched.applyDecisions(inv.catalog, inv.decisions)

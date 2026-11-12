@@ -18,6 +18,7 @@ To install a specific version, set `SCIMITAR_VERSION=v0.1.0` before `sh`.
 | Get the newest version | `sudo scimitar update` |
 | New admin password | `sudo scimitar reset-password` |
 | Change settings | `sudo scimitar install` |
+| Add a Juniper switch or firewall | `sudo scimitar add-device`, see [junos.md](junos.md) |
 | Logs | `journalctl -u scimitar -f` |
 | Remove | `sudo scimitar uninstall` |
 

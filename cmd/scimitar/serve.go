@@ -15,6 +15,7 @@ import (
 	"github.com/elliotnorth/Scimitar/internal/api"
 	"github.com/elliotnorth/Scimitar/internal/auth"
 	"github.com/elliotnorth/Scimitar/internal/core"
+	"github.com/elliotnorth/Scimitar/internal/sshkey"
 	"github.com/elliotnorth/Scimitar/web"
 )
 
@@ -31,7 +32,12 @@ func serve(configPath string) error {
 	if err := cfg.DataDir.ensure(); err != nil {
 		return err
 	}
-	registry, err := buildRegistry(cfg.Providers)
+	if cfg.hasProvider("junos") {
+		if _, err := sshkey.LoadOrCreate(cfg.DataDir.sshKey()); err != nil {
+			return err
+		}
+	}
+	registry, err := buildRegistry(cfg.Providers, cfg.DataDir)
 	if err != nil {
 		return err
 	}

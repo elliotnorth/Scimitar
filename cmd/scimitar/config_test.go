@@ -54,7 +54,7 @@ func TestBuildRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	registry, err := buildRegistry(cfg.Providers)
+	registry, err := buildRegistry(cfg.Providers, cfg.DataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestBuildRegistryErrors(t *testing.T) {
 		"duplicate name": {proxmoxSettings("a"), proxmoxSettings("a")},
 	}
 	for name, configs := range cases {
-		if _, err := buildRegistry(configs); err == nil {
+		if _, err := buildRegistry(configs, ""); err == nil {
 			t.Errorf("%s: expected error", name)
 		}
 	}

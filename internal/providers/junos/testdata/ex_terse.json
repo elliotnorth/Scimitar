@@ -1,0 +1,39 @@
+{
+    "interface-information" : [
+    {
+        "physical-interface" : [
+        {
+            "name" : [{"data" : "\nge-0/0/0\n"}],
+            "admin-status" : [{"data" : "\nup\n"}],
+            "oper-status" : [{"data" : "\nup\n"}],
+            "logical-interface" : [{"name" : [{"data" : "\nge-0/0/0.0\n"}], "admin-status" : [{"data" : "\nup\n"}]}]
+        },
+        {
+            "name" : [{"data" : "\nge-0/0/1\n"}],
+            "admin-status" : [{"data" : "\ndown\n"}],
+            "oper-status" : [{"data" : "\ndown\n"}]
+        },
+        {
+            "name" : [{"data" : "\nge-0/0/2\n"}],
+            "admin-status" : [{"data" : "\nup\n"}],
+            "oper-status" : [{"data" : "\ndown\n"}]
+        },
+        {
+            "name" : [{"data" : "\nxe-0/2/0\n"}],
+            "admin-status" : [{"data" : "\nup\n"}],
+            "oper-status" : [{"data" : "\nup\n"}]
+        },
+        {
+            "name" : [{"data" : "\nirb\n"}],
+            "admin-status" : [{"data" : "\nup\n"}],
+            "oper-status" : [{"data" : "\nup\n"}]
+        },
+        {
+            "name" : [{"data" : "\nvme\n"}],
+            "admin-status" : [{"data" : "\nup\n"}],
+            "oper-status" : [{"data" : "\nup\n"}]
+        }
+        ]
+    }
+    ]
+}

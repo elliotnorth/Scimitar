@@ -41,6 +41,8 @@ The page is served over HTTPS only. On first start Scimitar creates a self-signe
 
 ## Providers
 
+`junos`: Juniper EX, SRX, QFX and MX over SSH. Add them with `sudo scimitar add-device`; see [junos.md](junos.md).
+
 `proxmox`: see [proxmox.md](proxmox.md). Use `ca_file` instead of `fingerprint` if your certificate is signed by your own CA. Give each provider a different `name` when you add more than one cluster.
 
 ## Service status

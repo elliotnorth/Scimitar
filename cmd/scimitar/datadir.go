@@ -15,3 +15,4 @@ func (d dataDir) decisions() string { return filepath.Join(string(d), "decisions
 func (d dataDir) auth() string      { return filepath.Join(string(d), "auth.json") }
 func (d dataDir) cert() string      { return filepath.Join(string(d), "cert.pem") }
 func (d dataDir) key() string       { return filepath.Join(string(d), "key.pem") }
+func (d dataDir) sshKey() string    { return filepath.Join(string(d), "ssh_key") }

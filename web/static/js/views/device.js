@@ -28,12 +28,14 @@ export function deviceView(id) {
       el("div", { class: "mono dim small" }, `${kindLabel(device.kind)} · ${device.provider}`),
     );
 
-    const { servicesByDevice, parentOf, childrenOf, devicesById } = store.index;
+    const { servicesByDevice, parentOf, childrenOf, devicesById, connectedTo } = store.index;
     const sections = [section("details", detailsBody(device))];
     const services = servicesByDevice.get(device.id) || [];
     sections.push(section("apps", services.length ? panel({ class: "rows" }, services.map((s) => el("div", { class: "row" }, el("span", { class: "row-main" }, s.name), state(s.status)))) : el("p", { class: "dim" }, "No apps found on this device.")));
     const parent = devicesById.get(parentOf.get(device.id));
     if (parent) sections.push(section("runs on", panel({ class: "rows" }, linkRow(parent))));
+    const neighbors = (connectedTo.get(device.id) || []).map((n) => devicesById.get(n)).filter(Boolean).sort(byName);
+    if (neighbors.length) sections.push(section("connected to", panel({ class: "rows" }, neighbors.map(linkRow))));
     const guests = (childrenOf.get(device.id) || []).map((g) => devicesById.get(g)).filter(Boolean).sort(byName);
     if (guests.length) sections.push(section(`guests · ${guests.length}`, panel({ class: "rows" }, guests.map(linkRow))));
     body.replaceChildren(...sections);
