@@ -4,37 +4,46 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scimitar</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
-<script src="app.js" defer></script>
+<script type="module" src="js/main.js"></script>
 </head>
 <body>
-<header class="topbar">
-  <h1>Scimitar</h1>
-  <div id="summary" class="summary"></div>
-  <div id="updated" class="updated"></div>
-  <button id="logout" hidden>Log out</button>
-</header>
-<form id="login" class="card login" hidden>
-  <h2>Log in</h2>
-  <input id="password" type="password" autocomplete="current-password" placeholder="Admin password" required>
-  <button class="primary" type="submit">Log in</button>
-  <div id="login-error" class="login-error"></div>
-</form>
-<main id="app" hidden>
-  <div id="errors"></div>
-  <section id="review-section" hidden>
-    <h2>Needs review <span id="review-count" class="count"></span></h2>
-    <p class="hint">These might be services, but the match is not certain. Pick one or mark it as not a service.</p>
-    <div id="review" class="review-list"></div>
-  </section>
-  <section>
-    <h2>Services <span id="service-count" class="count"></span></h2>
-    <div id="services" class="service-grid"></div>
-  </section>
-  <section>
-    <h2>Devices <span id="device-count" class="count"></span></h2>
-    <div id="devices"></div>
-  </section>
-</main>
+<div id="login-screen" class="login-screen" hidden>
+  <form id="login" class="login-card">
+    <img src="favicon.svg" alt="" class="login-logo">
+    <h1>Log in to Scimitar</h1>
+    <p class="muted">Use the admin password from setup.</p>
+    <label class="field">
+      <span>Password</span>
+      <input id="password" type="password" autocomplete="current-password" required>
+    </label>
+    <button class="btn btn-primary btn-block" type="submit">Log in</button>
+    <p id="login-error" class="form-error" role="alert"></p>
+    <p class="muted small">Forgot it? Run <code>sudo scimitar reset-password</code> on the server.</p>
+  </form>
+</div>
+
+<div id="shell" hidden>
+  <header class="header">
+    <div class="container header-row">
+      <a class="brand" href="#/devices"><img src="favicon.svg" alt="">Scimitar</a>
+      <div class="header-right">
+        <span id="updated" class="muted small"></span>
+        <button id="logout" class="btn btn-ghost btn-small" type="button">Log out</button>
+      </div>
+    </div>
+    <nav class="container tabs" aria-label="Sections">
+      <a href="#/devices" data-tab="devices">Devices</a>
+      <a href="#/services" data-tab="services">Services</a>
+      <a href="#/review" data-tab="review">Review <span id="review-badge" class="tab-badge" hidden></span></a>
+      <a href="#/settings" data-tab="settings">Settings</a>
+    </nav>
+  </header>
+  <div id="banner" class="container"></div>
+  <main id="view" class="container"></main>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
 </body>
 </html>
