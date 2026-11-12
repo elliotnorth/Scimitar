@@ -14,6 +14,7 @@ internal/providers/   one package per data source (proxmox first)
 internal/api/         HTTP handlers
 internal/auth/        admin password and sessions
 web/                  UI, embedded into the binary
+deploy/               systemd service
 docs/                 short guides
 hooks/                git hooks
 scripts/              setup scripts
@@ -28,7 +29,7 @@ go build -o scimitar ./cmd/scimitar
 
 Then open https://127.0.0.1:8080 and log in with the admin password printed on first start.
 
-See [docs/config.md](docs/config.md) and [docs/proxmox.md](docs/proxmox.md).
+See [docs/config.md](docs/config.md), [docs/proxmox.md](docs/proxmox.md) and [docs/install.md](docs/install.md).
 
 ## Develop
 
