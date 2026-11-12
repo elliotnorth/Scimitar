@@ -90,5 +90,5 @@ func nonEmpty(values ...string) []string {
 }
 
 func certFingerprint(cert tls.Certificate) string {
-	return fmt.Sprintf("%X", sha256.Sum256(cert.Certificate[0]))
+	return colonHex(sha256.Sum256(cert.Certificate[0]))
 }

@@ -6,7 +6,8 @@ Wants=network-online.target
 [Service]
 ExecStart=/usr/local/bin/scimitar -config ${CREDENTIALS_DIRECTORY}/config
 LoadCredential=config:/etc/scimitar/scimitar.json
-DynamicUser=yes
+User=scimitar
+Group=scimitar
 StateDirectory=scimitar
 StateDirectoryMode=0700
 Restart=on-failure

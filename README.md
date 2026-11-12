@@ -20,22 +20,20 @@ hooks/                git hooks
 scripts/              setup scripts
 ```
 
-## Run
+## Install
 
 ```
-go build -o scimitar ./cmd/scimitar
-./scimitar -config scimitar.json
+sudo ./scimitar install
 ```
 
-Then open https://127.0.0.1:8080 and log in with the admin password printed on first start.
-
-See [docs/config.md](docs/config.md), [docs/proxmox.md](docs/proxmox.md) and [docs/install.md](docs/install.md).
+See [docs/install.md](docs/install.md). Settings are in [docs/config.md](docs/config.md), Proxmox token details in [docs/proxmox.md](docs/proxmox.md).
 
 ## Develop
 
 ```
 ./scripts/setup-hooks.sh
 go test ./...
+go run ./cmd/scimitar -config scimitar.json
 ```
 
 ## License

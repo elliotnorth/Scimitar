@@ -1,6 +1,6 @@
 # Configuration
 
-Scimitar reads one JSON file, `scimitar.json` by default. Pass another path with `-config`.
+Scimitar reads one JSON file, `/etc/scimitar/scimitar.json` by default. `scimitar install` writes it for you. Pass another path with `-config`.
 
 ```json
 {
@@ -35,7 +35,7 @@ The file holds an API token secret. Make it readable only by the user running Sc
 
 ## Login and HTTPS
 
-On first start Scimitar prints an admin password once and keeps only its hash in `data_dir/auth.json`. To get a new password, run `scimitar -config scimitar.json reset-password` and restart.
+On first start Scimitar prints an admin password once and keeps only its hash in `data_dir/auth.json`. To get a new password, run `sudo scimitar reset-password`.
 
 The page is served over HTTPS only. On first start Scimitar creates a self-signed certificate in `data_dir` and logs its SHA-256 fingerprint. Compare it with the one your browser shows before you accept the certificate. To use your own certificate, replace `cert.pem` and `key.pem` in `data_dir`.
 
