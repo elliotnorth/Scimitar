@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 
 	"github.com/elliotnorth/Scimitar/deploy"
 	"github.com/elliotnorth/Scimitar/internal/auth"
 	"github.com/elliotnorth/Scimitar/internal/providers/proxmox"
 )
 
-const webPort = "8080"
+const defaultWebPort = 8080
 
 type installer struct {
 	prompter
@@ -21,8 +22,9 @@ type installer struct {
 }
 
 func (i installer) install(ctx context.Context) error {
-	i.say("Scimitar setup\n")
-	if fileExists(i.paths.configFile()) {
+	i.say("Scimitar %s setup\n", version)
+	reinstall := fileExists(i.paths.configFile())
+	if reinstall {
 		replace, err := i.confirm("Scimitar is already installed. Replace its settings?", false)
 		if err != nil || !replace {
 			return errAborted
@@ -32,13 +34,9 @@ func (i installer) install(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	openToLAN, err := i.confirm("Allow other devices on your network to open Scimitar?", true)
+	listen, err := i.askListen(reinstall)
 	if err != nil {
 		return err
-	}
-	listen := "127.0.0.1:" + webPort
-	if openToLAN {
-		listen = "0.0.0.0:" + webPort
 	}
 
 	i.say("\nInstalling...")
@@ -58,7 +56,13 @@ func (i installer) install(ctx context.Context) error {
 	if err := i.startService(); err != nil {
 		return err
 	}
-	i.printDone(openToLAN, password, certFP)
+	_, port, _ := net.SplitHostPort(listen)
+	if err := i.healthy(ctx, port); err != nil {
+		i.say("\nScimitar was installed but is not answering yet: %v", err)
+		i.say("See what happened with: journalctl -u scimitar -n 30")
+		return errAborted
+	}
+	i.printDone(listen, password, certFP)
 	return nil
 }
 
@@ -68,35 +72,66 @@ func (i installer) askProxmox(ctx context.Context) (proxmox.Config, error) {
 		return proxmox.Config{}, err
 	}
 	if !haveToken {
-		i.say("\nRun these three commands in a shell on your Proxmox host, then come back:\n")
-		i.say("  pveum user add scimitar@pve")
-		i.say("  pveum user token add scimitar@pve scimitar --privsep 1")
-		i.say("  pveum acl modify / --tokens 'scimitar@pve!scimitar' --roles PVEAuditor\n")
-		i.say("The second command prints a secret (the \"value\" line). Keep it for the next step.\n")
+		i.showTokenSteps()
 		if _, err := i.ask("Press Enter when you are ready", ""); err != nil {
 			return proxmox.Config{}, err
 		}
 	}
+	pveURL, fingerprint, err := i.askServer(ctx)
+	if err != nil {
+		return proxmox.Config{}, err
+	}
+	for {
+		cfg, err := i.askToken(pveURL, fingerprint)
+		if err != nil {
+			return proxmox.Config{}, err
+		}
+		i.say("Checking the connection...")
+		count, err := testProxmox(ctx, cfg)
+		if err == nil {
+			i.say("Connected. Found %d %s and %d VMs and containers.\n", count.hosts, plural(count.hosts, "host", "hosts"), count.guests)
+			return cfg, nil
+		}
+		i.say("Proxmox did not accept the connection: %v", err)
+		if retry, err := i.confirm("Try another token?", true); err != nil || !retry {
+			return proxmox.Config{}, errAborted
+		}
+	}
+}
 
-	address, err := i.required("Proxmox address (for example 192.168.1.10)")
-	if err != nil {
-		return proxmox.Config{}, err
-	}
-	pveURL, err := proxmoxURL(address)
-	if err != nil {
-		return proxmox.Config{}, err
-	}
-	fingerprint, err := fetchFingerprint(ctx, pveURL)
-	if err != nil {
-		return proxmox.Config{}, err
-	}
-	i.say("\nProxmox certificate fingerprint:\n  %s", fingerprint)
-	i.say("You can compare it in the Proxmox web UI under your node, System, Certificates.")
-	trusted, err := i.confirm("Trust this certificate?", true)
-	if err != nil || !trusted {
-		return proxmox.Config{}, errAborted
-	}
+func (i installer) showTokenSteps() {
+	i.say("\nRun these three commands in a shell on your Proxmox host, then come back:\n")
+	i.say("  pveum user add scimitar@pve")
+	i.say("  pveum user token add scimitar@pve scimitar --privsep 1")
+	i.say("  pveum acl modify / --tokens 'scimitar@pve!scimitar' --roles PVEAuditor\n")
+	i.say("The second command prints a secret (the \"value\" line). Keep it for the next step.\n")
+}
 
+func (i installer) askServer(ctx context.Context) (pveURL, fingerprint string, err error) {
+	for {
+		address, err := i.required("Proxmox address (for example 192.168.1.10)")
+		if err != nil {
+			return "", "", err
+		}
+		pveURL, err = proxmoxURL(address)
+		if err == nil {
+			fingerprint, err = fetchFingerprint(ctx, pveURL)
+		}
+		if err != nil {
+			i.say("%v. Check the address and try again.", err)
+			continue
+		}
+		i.say("\nProxmox certificate fingerprint:\n  %s", fingerprint)
+		i.say("You can compare it in the Proxmox web UI under your node, System, Certificates.")
+		trusted, err := i.confirm("Trust this certificate?", true)
+		if err != nil || !trusted {
+			return "", "", errAborted
+		}
+		return pveURL, fingerprint, nil
+	}
+}
+
+func (i installer) askToken(pveURL, fingerprint string) (proxmox.Config, error) {
 	tokenID, err := i.ask("Token ID", "scimitar@pve!scimitar")
 	if err != nil {
 		return proxmox.Config{}, err
@@ -105,15 +140,32 @@ func (i installer) askProxmox(ctx context.Context) (proxmox.Config, error) {
 	if err != nil {
 		return proxmox.Config{}, err
 	}
-	cfg := proxmox.Config{URL: pveURL, TokenID: tokenID, TokenSecret: secret, Fingerprint: fingerprint}
+	return proxmox.Config{URL: pveURL, TokenID: tokenID, TokenSecret: secret, Fingerprint: fingerprint}, nil
+}
 
-	i.say("Checking the connection...")
-	count, err := testProxmox(ctx, cfg)
+func (i installer) askListen(reinstall bool) (string, error) {
+	openToLAN, err := i.confirm("Allow other devices on your network to open Scimitar?", true)
 	if err != nil {
-		return proxmox.Config{}, fmt.Errorf("Proxmox did not accept the connection: %w", err)
+		return "", err
 	}
-	i.say("Connected. Found %d %s and %d VMs and containers.\n", count.hosts, plural(count.hosts, "host", "hosts"), count.guests)
-	return cfg, nil
+	host := "127.0.0.1"
+	if openToLAN {
+		host = "0.0.0.0"
+	}
+	port := defaultWebPort
+	for {
+		listen := net.JoinHostPort(host, strconv.Itoa(port))
+		if reinstall || i.portFree(listen) {
+			return listen, nil
+		}
+		answer, err := i.ask(fmt.Sprintf("Port %d is already in use. Which port should Scimitar use?", port), strconv.Itoa(port+1))
+		if err != nil {
+			return "", err
+		}
+		if p, err := strconv.Atoi(answer); err == nil && p > 0 && p < 65536 {
+			port = p
+		}
+	}
 }
 
 func (i installer) writeConfig(listen string, pve proxmox.Config) error {
@@ -170,13 +222,13 @@ func (i installer) startService() error {
 	return nil
 }
 
-func (i installer) printDone(openToLAN bool, password, certFP string) {
-	host := "127.0.0.1"
-	if ip := primaryIP(); openToLAN && ip != "" {
+func (i installer) printDone(listen, password, certFP string) {
+	host, port, _ := net.SplitHostPort(listen)
+	if ip := primaryIP(); host == "0.0.0.0" && ip != "" {
 		host = ip
 	}
 	i.say("\nScimitar is running.\n")
-	i.say("  Open:      https://%s", net.JoinHostPort(host, webPort))
+	i.say("  Open:      https://%s", net.JoinHostPort(host, port))
 	if password != "" {
 		i.say("  Password:  %s", password)
 		i.say("             Write it down. It is shown only once.")
@@ -185,7 +237,11 @@ func (i installer) printDone(openToLAN bool, password, certFP string) {
 	}
 	i.say("\nYour browser will warn about the certificate because Scimitar made its own.")
 	i.say("It is safe to continue if the browser shows this fingerprint:\n  %s", certFP)
-	i.say("\nForgot the password? Run: sudo scimitar reset-password")
+	i.say("\nUseful commands:")
+	i.say("  scimitar status                 see if it is running")
+	i.say("  sudo scimitar update            get the newest version")
+	i.say("  sudo scimitar reset-password    forgot the password")
+	i.say("  sudo scimitar uninstall         remove it")
 }
 
 func primaryIP() string {

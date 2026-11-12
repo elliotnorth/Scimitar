@@ -18,8 +18,11 @@ const usage = `usage: scimitar [-config path] [command]
 commands:
   (none)           run Scimitar
   install          set up Scimitar as a service on this machine
-  uninstall        remove the service, keeping your data
+  status           show whether Scimitar is running and where to open it
+  update           install the newest release
   reset-password   create a new admin password
+  uninstall        remove the service, keeping your data
+  version          print the version
 `
 
 func main() {
@@ -47,25 +50,39 @@ func dispatch(command, configPath string) error {
 	switch command {
 	case "":
 		return serve(configPath)
-	case "install", "uninstall":
-		if os.Geteuid() != 0 {
-			return fmt.Errorf("%s needs root: sudo %s %s", command, os.Args[0], command)
-		}
-		i := installer{
-			prompter:   prompter{in: bufio.NewReader(os.Stdin), out: os.Stdout},
-			system:     realSystem(),
-			readSecret: readHidden,
-		}
-		if command == "install" {
-			return i.install(context.Background())
-		}
-		return i.uninstall()
+	case "version":
+		fmt.Println(version)
+		return nil
+	case "status":
+		printStatus(os.Stdout, configPath, systemPaths)
+		return nil
 	case "reset-password":
 		return resetPassword(configPath)
+	case "install", "uninstall", "update":
+		if os.Geteuid() != 0 {
+			return fmt.Errorf("%s needs root: sudo scimitar %s", command, command)
+		}
+		return runAsRoot(command)
 	}
 	flag.Usage()
 	os.Exit(2)
 	return nil
+}
+
+func runAsRoot(command string) error {
+	ctx := context.Background()
+	if command == "update" {
+		return updater{releases: githubReleases(), system: realSystem(), out: os.Stdout}.update(ctx)
+	}
+	i := installer{
+		prompter:   prompter{in: bufio.NewReader(os.Stdin), out: os.Stdout},
+		system:     realSystem(),
+		readSecret: readHidden,
+	}
+	if command == "install" {
+		return i.install(ctx)
+	}
+	return i.uninstall()
 }
 
 func resetPassword(configPath string) error {

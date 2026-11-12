@@ -14,6 +14,7 @@ type Snapshot struct {
 	Services  []domain.Service
 	Links     []domain.Link
 	Review    []ReviewItem
+	Providers []string
 	Errors    map[string]string
 	UpdatedAt time.Time
 }

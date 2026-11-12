@@ -10,6 +10,7 @@ func TestAPIRequiresSession(t *testing.T) {
 	for _, tc := range []struct{ method, path string }{
 		{http.MethodGet, "/api/snapshot"},
 		{http.MethodGet, "/api/catalog"},
+		{http.MethodGet, "/api/info"},
 		{http.MethodGet, "/api/details?id=x"},
 		{http.MethodPost, "/api/review"},
 	} {

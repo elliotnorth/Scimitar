@@ -23,7 +23,7 @@ scripts/              setup scripts
 ## Install
 
 ```
-sudo ./scimitar install
+curl -fsSL https://github.com/elliotnorth/Scimitar/releases/latest/download/install.sh | sh
 ```
 
 See [docs/install.md](docs/install.md). Settings are in [docs/config.md](docs/config.md), Proxmox token details in [docs/proxmox.md](docs/proxmox.md).

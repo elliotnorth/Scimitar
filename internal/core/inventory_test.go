@@ -36,7 +36,7 @@ func TestDiscoverBuildsSnapshot(t *testing.T) {
 	inv.Discover(context.Background())
 	s := inv.Snapshot()
 
-	if len(s.Devices) != 3 || len(s.Links) != 2 || len(s.Errors) != 0 {
+	if len(s.Devices) != 3 || len(s.Links) != 2 || len(s.Errors) != 0 || !reflect.DeepEqual(s.Providers, []string{"lab"}) {
 		t.Fatalf("unexpected snapshot: %+v", s)
 	}
 	if !reflect.DeepEqual(serviceIDs(s.Services), []string{"lab/guest/101/immich"}) {

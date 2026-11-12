@@ -63,7 +63,7 @@ func (f *fakeAuth) SessionTTL() time.Duration { return time.Hour }
 
 func newTestHandlerWithAuth(inv *fakeInventory, auth *fakeAuth) http.Handler {
 	ui := fstest.MapFS{"index.html": {Data: []byte("<!doctype html><title>Scimitar</title>")}}
-	return NewHandler(inv, auth, ui)
+	return NewHandler(inv, auth, ui, Info{Version: "v1.2.3"})
 }
 
 func newTestHandler(inv *fakeInventory) http.Handler {
@@ -95,6 +95,7 @@ func TestSnapshotJSON(t *testing.T) {
 		Services:  []domain.Service{{ID: "p/guest/1/immich", Name: "Immich", CatalogID: "immich", DeviceID: "p/guest/1", Status: domain.StatusUnknown}},
 		Links:     []domain.Link{{From: "p/guest/1", To: "p/node/a", Kind: domain.LinkRunsOn}},
 		Review:    []core.ReviewItem{{Hint: domain.ServiceHint{DeviceID: "p/guest/2", Source: "name", Value: "immich-old"}, CandidateIDs: []string{"immich"}}},
+		Providers: []string{"p", "q"},
 		Errors:    map[string]string{"q": "unreachable"},
 		UpdatedAt: updated,
 	}}
@@ -114,6 +115,7 @@ func TestSnapshotJSON(t *testing.T) {
 			"key": "p/guest/2|name|immich-old", "device_id": "p/guest/2", "source": "name", "value": "immich-old",
 			"candidate_ids": []any{"immich"},
 		}},
+		"providers":  []any{"p", "q"},
 		"errors":     map[string]any{"q": "unreachable"},
 		"updated_at": "2026-11-12T09:00:00Z",
 	}
@@ -125,10 +127,17 @@ func TestSnapshotJSON(t *testing.T) {
 func TestEmptySnapshotUsesEmptyLists(t *testing.T) {
 	rec := do(t, newTestHandler(&fakeInventory{}), http.MethodGet, "/api/snapshot", "", "")
 	body := rec.Body.String()
-	for _, want := range []string{`"devices":[]`, `"review":[]`, `"errors":{}`, `"updated_at":null`} {
+	for _, want := range []string{`"providers":[]`, `"devices":[]`, `"review":[]`, `"errors":{}`, `"updated_at":null`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %s in %s", want, body)
 		}
+	}
+}
+
+func TestInfo(t *testing.T) {
+	rec := do(t, newTestHandler(&fakeInventory{}), http.MethodGet, "/api/info", "", "")
+	if strings.TrimSpace(rec.Body.String()) != `{"version":"v1.2.3"}` {
+		t.Fatalf("got %s", rec.Body.String())
 	}
 }
 

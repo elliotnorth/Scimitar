@@ -42,6 +42,7 @@ type snapshotView struct {
 	Services  []serviceView     `json:"services"`
 	Links     []linkView        `json:"links"`
 	Review    []reviewView      `json:"review"`
+	Providers []string          `json:"providers"`
 	Errors    map[string]string `json:"errors"`
 	UpdatedAt *time.Time        `json:"updated_at"`
 }
@@ -58,11 +59,12 @@ type detailView struct {
 
 func toSnapshotView(s core.Snapshot) snapshotView {
 	v := snapshotView{
-		Devices:  make([]deviceView, len(s.Devices)),
-		Services: make([]serviceView, len(s.Services)),
-		Links:    make([]linkView, len(s.Links)),
-		Review:   make([]reviewView, len(s.Review)),
-		Errors:   s.Errors,
+		Devices:   make([]deviceView, len(s.Devices)),
+		Services:  make([]serviceView, len(s.Services)),
+		Links:     make([]linkView, len(s.Links)),
+		Review:    make([]reviewView, len(s.Review)),
+		Providers: append([]string{}, s.Providers...),
+		Errors:    s.Errors,
 	}
 	if v.Errors == nil {
 		v.Errors = map[string]string{}

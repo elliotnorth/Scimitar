@@ -47,8 +47,10 @@ func fakeProxmox(t *testing.T) *httptest.Server {
 
 type testInstall struct {
 	installer
-	out      *bytes.Buffer
-	commands []string
+	out       *bytes.Buffer
+	commands  []string
+	busy      map[string]bool
+	healthErr error
 }
 
 func newTestInstall(t *testing.T, input string) *testInstall {
@@ -60,7 +62,7 @@ func newTestInstall(t *testing.T, input string) *testInstall {
 	for _, dir := range []string{"bin", "systemd"} {
 		os.MkdirAll(filepath.Join(root, dir), 0o755)
 	}
-	ti := &testInstall{out: &bytes.Buffer{}}
+	ti := &testInstall{out: &bytes.Buffer{}, busy: map[string]bool{}}
 	ti.installer = installer{
 		prompter: prompter{in: bufio.NewReader(strings.NewReader(input)), out: ti.out},
 		system: system{
@@ -76,6 +78,8 @@ func newTestInstall(t *testing.T, input string) *testInstall {
 			},
 			owner:      func() (int, int, error) { return os.Getuid(), os.Getgid(), nil },
 			executable: func() (string, error) { return self, nil },
+			portFree:   func(listen string) bool { return !ti.busy[listen] },
+			healthy:    func(context.Context, string) error { return ti.healthErr },
 		},
 		readSecret: func(p prompter, q string) (string, error) { return p.required(q) },
 	}
@@ -151,11 +155,57 @@ func TestInstallShowsTokenStepsAndLocalOnly(t *testing.T) {
 	}
 }
 
-func TestInstallStopsOnWrongSecret(t *testing.T) {
+func TestInstallRetriesWrongSecret(t *testing.T) {
 	srv := fakeProxmox(t)
-	ti := newTestInstall(t, answers("y", srv.URL, "", "", "bad-secret"))
-	err := ti.install(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "401") {
+	ti := newTestInstall(t, answers("y", srv.URL, "", "", "bad-secret", "", "", "good-secret", ""))
+	if err := ti.install(context.Background()); err != nil {
+		t.Fatalf("%v\n%s", err, ti.out)
+	}
+	if !strings.Contains(ti.out.String(), "401") {
+		t.Fatalf("failure not explained:\n%s", ti.out)
+	}
+}
+
+func TestInstallRetriesBadAddress(t *testing.T) {
+	srv := fakeProxmox(t)
+	ti := newTestInstall(t, answers("y", "http://"+strings.TrimPrefix(srv.URL, "https://"), "127.0.0.1:1", srv.URL, "", "", "good-secret", ""))
+	if err := ti.install(context.Background()); err != nil {
+		t.Fatalf("%v\n%s", err, ti.out)
+	}
+	if got := strings.Count(ti.out.String(), "Check the address and try again"); got != 2 {
+		t.Fatalf("expected two retries, got %d:\n%s", got, ti.out)
+	}
+}
+
+func TestInstallPicksAnotherPortWhenBusy(t *testing.T) {
+	srv := fakeProxmox(t)
+	ti := newTestInstall(t, answers("y", srv.URL, "", "", "good-secret", "", "9090"))
+	ti.busy["0.0.0.0:8080"] = true
+	if err := ti.install(context.Background()); err != nil {
+		t.Fatalf("%v\n%s", err, ti.out)
+	}
+	cfg, _ := loadConfig(ti.paths.configFile())
+	if cfg.Listen != "0.0.0.0:9090" || !strings.Contains(ti.out.String(), ":9090") {
+		t.Fatalf("listen %s\n%s", cfg.Listen, ti.out)
+	}
+}
+
+func TestInstallReportsServiceThatDoesNotStart(t *testing.T) {
+	srv := fakeProxmox(t)
+	ti := newTestInstall(t, answers("y", srv.URL, "", "", "good-secret", ""))
+	ti.healthErr = errors.New("connection refused")
+	if err := ti.install(context.Background()); !errors.Is(err, errAborted) {
+		t.Fatalf("got %v", err)
+	}
+	if out := ti.out.String(); !strings.Contains(out, "journalctl -u scimitar") || strings.Contains(out, "Scimitar is running") {
+		t.Fatalf("output:\n%s", out)
+	}
+}
+
+func TestInstallStopsWhenTokenRetryDeclined(t *testing.T) {
+	srv := fakeProxmox(t)
+	ti := newTestInstall(t, answers("y", srv.URL, "", "", "bad-secret", "n"))
+	if err := ti.install(context.Background()); !errors.Is(err, errAborted) {
 		t.Fatalf("got %v", err)
 	}
 	if fileExists(ti.paths.configFile()) || len(ti.commands) != 0 {

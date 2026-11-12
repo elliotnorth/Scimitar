@@ -1,17 +1,25 @@
 package main
 
 import (
+	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
-const serviceUser = "scimitar"
+const (
+	serviceUser   = "scimitar"
+	healthTimeout = 20 * time.Second
+)
 
 type installPaths struct {
 	binary    string
@@ -36,6 +44,8 @@ type system struct {
 	run        func(name string, args ...string) error
 	owner      func() (uid, gid int, err error)
 	executable func() (string, error)
+	portFree   func(listen string) bool
+	healthy    func(ctx context.Context, port string) error
 }
 
 func realSystem() system {
@@ -50,6 +60,42 @@ func realSystem() system {
 		},
 		owner:      lookupServiceUser,
 		executable: os.Executable,
+		portFree:   portFree,
+		healthy:    waitHealthy,
+	}
+}
+
+func portFree(listen string) bool {
+	l, err := net.Listen("tcp", listen)
+	if err != nil {
+		return false
+	}
+	l.Close()
+	return true
+}
+
+func waitHealthy(ctx context.Context, port string) error {
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+		// Scimitar's own certificate was just created on this machine, so there is nothing to verify it against yet.
+		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+	}
+	ctx, cancel := context.WithTimeout(ctx, healthTimeout)
+	defer cancel()
+	var lastErr error
+	for {
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "https://127.0.0.1:"+port+"/", nil)
+		resp, err := client.Do(req)
+		if err == nil {
+			resp.Body.Close()
+			return nil
+		}
+		lastErr = err
+		select {
+		case <-ctx.Done():
+			return lastErr
+		case <-time.After(500 * time.Millisecond):
+		}
 	}
 }
 

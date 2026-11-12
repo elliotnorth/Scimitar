@@ -56,7 +56,7 @@ func serve(configPath string) error {
 
 	server := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           api.NewHandler(inventory, auth.NewGuard(password, sessionTTL), web.Files()),
+		Handler:           api.NewHandler(inventory, auth.NewGuard(password, sessionTTL), web.Files(), api.Info{Version: version}),
 		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}},
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

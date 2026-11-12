@@ -8,6 +8,7 @@ func (inv *Inventory) rebuild() {
 	deviceStatus := map[string]domain.Status{}
 
 	for _, p := range inv.registry.Providers() {
+		next.Providers = append(next.Providers, p.Name())
 		state, ok := inv.states[p.Name()]
 		if !ok {
 			continue
