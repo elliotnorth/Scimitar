@@ -1,0 +1,8 @@
+#!/bin/sh
+forbidden='co-authored-by|generated|claude|anthropic|chatgpt|openai|copilot|gpt-|llm|ai-assisted|ai-generated|(^|[^a-z])ai([^a-z]|$)'
+
+if grep -v '^#' "$1" | grep -Eiq "$forbidden"; then
+	echo "commit-msg: message contains a forbidden term:" >&2
+	grep -v '^#' "$1" | grep -Eio "$forbidden" | sort -u | sed 's/^/  /' >&2
+	exit 1
+fi
