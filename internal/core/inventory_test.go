@@ -186,3 +186,18 @@ func TestDecideKeepsStateWhenSaveFails(t *testing.T) {
 		t.Fatal("decision applied although it was not saved")
 	}
 }
+
+func TestDetailsRoutesToOwningProvider(t *testing.T) {
+	inv, provider := newLabInventory(t, &memoryDecisions{})
+	inv.Discover(context.Background())
+	if _, err := inv.Details(context.Background(), "lab/guest/101"); err != nil {
+		t.Fatal(err)
+	}
+	provider.err = errUnreachable
+	if _, err := inv.Details(context.Background(), "lab/guest/101"); !errors.Is(err, errUnreachable) {
+		t.Fatalf("provider error not passed through: %v", err)
+	}
+	if _, err := inv.Details(context.Background(), "other/guest/1"); !errors.Is(err, ErrUnknownDevice) {
+		t.Fatalf("got %v", err)
+	}
+}

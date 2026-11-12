@@ -4,6 +4,7 @@ Scimitar reads one JSON file, `scimitar.json` by default. Pass another path with
 
 ```json
 {
+  "listen": "127.0.0.1:8080",
   "state_file": "/var/lib/scimitar/decisions.json",
   "discover_seconds": 300,
   "status_seconds": 30,
@@ -24,6 +25,7 @@ Scimitar reads one JSON file, `scimitar.json` by default. Pass another path with
 
 | Field | Default | Meaning |
 |---|---|---|
+| `listen` | `127.0.0.1:8080` | address for the web page. Only this machine can reach it by default |
 | `state_file` | `scimitar-decisions.json` | where your review decisions are kept |
 | `discover_seconds` | `300` | how often to rediscover devices and services |
 | `status_seconds` | `30` | how often to refresh up/down status |

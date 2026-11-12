@@ -14,7 +14,10 @@ type DecisionStore interface {
 	Save(Decisions) error
 }
 
-var ErrUnknownReviewItem = errors.New("no such review item")
+var (
+	ErrUnknownReviewItem   = errors.New("no such review item")
+	ErrUnknownCatalogEntry = errors.New("no such catalog entry")
+)
 
 func (r *MatchResult) applyDecisions(catalog []CatalogEntry, decisions Decisions) {
 	undecided := r.Review[:0]
@@ -37,7 +40,7 @@ func validateDecision(catalog []CatalogEntry, catalogID string) error {
 		return nil
 	}
 	if _, ok := findEntry(catalog, catalogID); !ok {
-		return fmt.Errorf("unknown catalog id %q", catalogID)
+		return fmt.Errorf("%w: %q", ErrUnknownCatalogEntry, catalogID)
 	}
 	return nil
 }

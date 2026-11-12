@@ -14,6 +14,7 @@ type providerConfig struct {
 }
 
 type config struct {
+	Listen          string           `json:"listen"`
 	StateFile       string           `json:"state_file"`
 	DiscoverSeconds int              `json:"discover_seconds"`
 	StatusSeconds   int              `json:"status_seconds"`
@@ -22,6 +23,7 @@ type config struct {
 
 func loadConfig(path string) (config, error) {
 	cfg := config{
+		Listen:          "127.0.0.1:8080",
 		StateFile:       "scimitar-decisions.json",
 		DiscoverSeconds: 300,
 		StatusSeconds:   30,

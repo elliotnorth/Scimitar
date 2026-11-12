@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scimitar</title>
+<link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <h1>Scimitar</h1>
+  <div id="summary" class="summary"></div>
+  <div id="updated" class="updated"></div>
+</header>
+<main>
+  <div id="errors"></div>
+  <section id="review-section" hidden>
+    <h2>Needs review <span id="review-count" class="count"></span></h2>
+    <p class="hint">These might be services, but the match is not certain. Pick one or mark it as not a service.</p>
+    <div id="review" class="review-list"></div>
+  </section>
+  <section>
+    <h2>Services <span id="service-count" class="count"></span></h2>
+    <div id="services" class="service-grid"></div>
+  </section>
+  <section>
+    <h2>Devices <span id="device-count" class="count"></span></h2>
+    <div id="devices"></div>
+  </section>
+</main>
+</body>
+</html>
