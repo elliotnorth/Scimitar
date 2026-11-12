@@ -18,6 +18,15 @@ hooks/                git hooks
 scripts/              setup scripts
 ```
 
+## Run
+
+```
+go build -o scimitar ./cmd/scimitar
+./scimitar -config scimitar.json
+```
+
+See [docs/config.md](docs/config.md) and [docs/proxmox.md](docs/proxmox.md).
+
 ## Develop
 
 ```

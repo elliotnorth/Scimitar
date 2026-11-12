@@ -6,11 +6,6 @@ import (
 	"github.com/elliotnorth/Scimitar/internal/domain"
 )
 
-type ReviewItem struct {
-	Hint         domain.ServiceHint
-	CandidateIDs []string
-}
-
 type MatchResult struct {
 	Services []domain.Service
 	Review   []ReviewItem
@@ -18,36 +13,27 @@ type MatchResult struct {
 
 func Match(catalog []CatalogEntry, hints []domain.ServiceHint) MatchResult {
 	var result MatchResult
-	confirmed := map[string]bool{}
-	var uncertain []ReviewItem
-
 	for _, hint := range hints {
 		exact, partial := matchHint(catalog, hint.Value)
 		switch {
 		case len(exact) == 1:
-			key := serviceID(hint.DeviceID, exact[0].ID)
-			if !confirmed[key] {
-				confirmed[key] = true
-				result.Services = append(result.Services, newService(hint.DeviceID, exact[0]))
-			}
+			result.addService(hint.DeviceID, exact[0])
 		case len(exact) > 1 || len(partial) > 0:
-			uncertain = append(uncertain, ReviewItem{Hint: hint, CandidateIDs: entryIDs(append(exact, partial...))})
+			result.Review = append(result.Review, ReviewItem{Hint: hint, CandidateIDs: entryIDs(append(exact, partial...))})
 		}
 	}
-
-	for _, item := range uncertain {
-		var open []string
-		for _, id := range item.CandidateIDs {
-			if !confirmed[serviceID(item.Hint.DeviceID, id)] {
-				open = append(open, id)
-			}
-		}
-		if len(open) > 0 {
-			item.CandidateIDs = open
-			result.Review = append(result.Review, item)
-		}
-	}
+	result.pruneConfirmed()
 	return result
+}
+
+func (r *MatchResult) addService(deviceID string, entry CatalogEntry) {
+	id := serviceID(deviceID, entry.ID)
+	for _, s := range r.Services {
+		if s.ID == id {
+			return
+		}
+	}
+	r.Services = append(r.Services, newService(deviceID, entry))
 }
 
 func matchHint(catalog []CatalogEntry, value string) (exact, partial []CatalogEntry) {

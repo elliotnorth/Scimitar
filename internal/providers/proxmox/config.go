@@ -3,12 +3,12 @@ package proxmox
 import "errors"
 
 type Config struct {
-	Name        string
-	URL         string
-	TokenID     string
-	TokenSecret string
-	Fingerprint string
-	CAFile      string
+	Name        string `json:"name"`
+	URL         string `json:"url"`
+	TokenID     string `json:"token_id"`
+	TokenSecret string `json:"token_secret"`
+	Fingerprint string `json:"fingerprint"`
+	CAFile      string `json:"ca_file"`
 }
 
 func (c Config) validate() error {
