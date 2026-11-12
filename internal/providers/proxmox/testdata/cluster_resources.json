@@ -1,0 +1,9 @@
+{
+  "data": [
+    {"id": "qemu/101", "type": "qemu", "node": "pve1", "vmid": 101, "name": "immich", "status": "running", "tags": "photos", "template": 0, "maxcpu": 4, "maxmem": 8589934592, "uptime": 86520},
+    {"id": "qemu/102", "type": "qemu", "node": "pve1", "vmid": 102, "name": "nextcloud-old", "status": "stopped", "template": 0, "maxcpu": 2, "maxmem": 4294967296, "uptime": 0},
+    {"id": "lxc/200", "type": "lxc", "node": "pve1", "vmid": 200, "name": "ct-200", "status": "running", "tags": "vaultwarden;prod", "template": 0, "maxcpu": 1, "maxmem": 536870912, "uptime": 3720},
+    {"id": "lxc/201", "type": "lxc", "node": "pve2", "vmid": 201, "name": "jellyfin", "status": "unknown", "template": 0},
+    {"id": "qemu/9000", "type": "qemu", "node": "pve1", "vmid": 9000, "name": "debian-template", "status": "stopped", "template": 1}
+  ]
+}
