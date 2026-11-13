@@ -95,7 +95,7 @@ func TestOnlyFixedCommandsRun(t *testing.T) {
 }
 
 func TestNoLLDPMeansNoLinks(t *testing.T) {
-	dev := newFakeDevice(t, map[string]string{cmdVersion: "ex_version.json"})
+	dev := newFakeDevice(t, map[string]string{cmdVersion: "ex_version.xml", cmdNeighbors: "lldp_off.xml"})
 	p := newTestProvider(t, dev)
 	d, err := p.Discover(context.Background())
 	if err != nil {
@@ -170,9 +170,9 @@ func TestNewValidatesConfig(t *testing.T) {
 
 func TestParseVersionShapes(t *testing.T) {
 	for file, want := range map[string]SystemInfo{
-		"ex_version.json":          {Hostname: "ex3400", Model: "ex3400-48p", Version: "23.4R2-S2.1"},
-		"srx_cluster_version.json": {Hostname: "srx-a", Model: "srx2300", Version: "23.4R1"},
-		"old_version.json":         {Hostname: "old-ex", Model: "ex2200-c-12p-2g", Version: "12.3R12.4"},
+		"ex_version.xml":          {Hostname: "ex3400", Model: "ex3400-48p", Version: "23.4R2-S2.1"},
+		"srx_cluster_version.xml": {Hostname: "srx-a", Model: "srx2300", Version: "23.4R1"},
+		"old_srx_version.xml":     {Hostname: "lab-srx", Model: "srx240h2", Version: "12.1X46-D40.2"},
 	} {
 		body, err := os.ReadFile(filepath.Join("testdata", file))
 		if err != nil {
@@ -216,5 +216,25 @@ func TestNormalizeAddress(t *testing.T) {
 		if _, err := NormalizeAddress(bad); err == nil {
 			t.Errorf("%q: expected error", bad)
 		}
+	}
+}
+
+func TestOldJunosSSH(t *testing.T) {
+	dev := newOldFakeDevice(t, map[string]string{cmdVersion: "old_srx_version.xml", cmdNeighbors: "lldp_off.xml"})
+	fp, keyType, err := FetchHostKey(context.Background(), dev.addr)
+	if err != nil || fp != dev.hostKey || keyType != "ssh-rsa" {
+		t.Fatalf("host key: %s %s %v", fp, keyType, err)
+	}
+	p, err := New(dev.config("lab-srx"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	d, err := p.Discover(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Devices) != 1 || d.Devices[0].Kind != domain.DeviceFirewall || len(d.Links) != 0 {
+		t.Fatalf("discovery: %+v", d)
 	}
 }

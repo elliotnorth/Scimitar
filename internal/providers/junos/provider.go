@@ -15,11 +15,12 @@ import (
 )
 
 // The only commands this provider runs. Nothing here takes user input.
+// XML output works on every Junos release; JSON needs 14.2 or newer.
 const (
-	cmdVersion      = "show version | display json"
-	cmdPorts        = "show interfaces terse | display json"
-	cmdDescriptions = "show interfaces descriptions | display json"
-	cmdNeighbors    = "show lldp neighbors | display json"
+	cmdVersion      = "show version | display xml"
+	cmdPorts        = "show interfaces terse | display xml"
+	cmdDescriptions = "show interfaces descriptions | display xml"
+	cmdNeighbors    = "show lldp neighbors | display xml"
 )
 
 var _ domain.Provider = (*Provider)(nil)
@@ -51,13 +52,12 @@ func New(cfg Config) (*Provider, error) {
 		host: host,
 		conn: &conn{
 			addr: addr,
-			config: &ssh.ClientConfig{
-				User:              cfg.Username,
-				Auth:              []ssh.AuthMethod{ssh.PublicKeys(signer)},
-				HostKeyCallback:   pinnedHostKey(cfg.HostKey),
-				HostKeyAlgorithms: hostKeyAlgorithms,
-				Timeout:           dialTimeout,
-			},
+			config: withOlderJunos(&ssh.ClientConfig{
+				User:            cfg.Username,
+				Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+				HostKeyCallback: pinnedHostKey(cfg.HostKey),
+				Timeout:         dialTimeout,
+			}),
 		},
 	}, nil
 }
@@ -115,7 +115,7 @@ func (p *Provider) Discover(ctx context.Context) (domain.Discovery, error) {
 }
 
 // neighbors returns LLDP neighbors. A device without LLDP running answers with
-// an error message instead of JSON; that means no neighbors, not a failure.
+// an error instead of neighbor data; that means no neighbors, not a failure.
 func (p *Provider) neighbors(ctx context.Context) ([]Neighbor, error) {
 	out, err := p.conn.run(ctx, cmdNeighbors)
 	if err != nil {

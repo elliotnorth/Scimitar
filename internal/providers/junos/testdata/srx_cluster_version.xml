@@ -1,0 +1,20 @@
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/23.4R1/junos">
+    <multi-routing-engine-results>
+        <multi-routing-engine-item>
+            <re-name>node0</re-name>
+            <software-information>
+                <host-name>srx-a</host-name>
+                <product-model>srx2300</product-model>
+                <junos-version>23.4R1</junos-version>
+            </software-information>
+        </multi-routing-engine-item>
+        <multi-routing-engine-item>
+            <re-name>node1</re-name>
+            <software-information>
+                <host-name>srx-b</host-name>
+                <product-model>srx2300</product-model>
+                <junos-version>23.4R1</junos-version>
+            </software-information>
+        </multi-routing-engine-item>
+    </multi-routing-engine-results>
+</rpc-reply>

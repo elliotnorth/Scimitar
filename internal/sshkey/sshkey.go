@@ -2,8 +2,8 @@
 package sshkey
 
 import (
-	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/rsa"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -14,9 +14,13 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const comment = "scimitar"
+const (
+	comment = "scimitar"
+	// RSA because every Junos release accepts it; older ones have no ed25519 or ECDSA.
+	rsaBits = 3072
+)
 
-// LoadOrCreate reads the private key at path, creating a new ed25519 key there if none exists.
+// LoadOrCreate reads the private key at path, creating a new RSA key there if none exists.
 func LoadOrCreate(path string) (ssh.Signer, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -45,7 +49,7 @@ func Load(path string) (ssh.Signer, error) {
 }
 
 func create(path string) error {
-	_, key, err := ed25519.GenerateKey(rand.Reader)
+	key, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
 		return err
 	}
@@ -66,7 +70,15 @@ func create(path string) error {
 	return f.Close()
 }
 
-// AuthorizedKey returns the public key as one authorized_keys line, for example "ssh-ed25519 AAAA... scimitar".
+// Replace removes the key at path and creates a new one.
+func Replace(path string) (ssh.Signer, error) {
+	if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
+	return LoadOrCreate(path)
+}
+
+// AuthorizedKey returns the public key as one authorized_keys line, for example "ssh-rsa AAAA... scimitar".
 func AuthorizedKey(signer ssh.Signer) string {
 	return strings.TrimSpace(string(ssh.MarshalAuthorizedKey(signer.PublicKey()))) + " " + comment
 }

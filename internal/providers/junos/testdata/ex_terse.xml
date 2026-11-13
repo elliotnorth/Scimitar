@@ -1,0 +1,84 @@
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/23.4R2/junos">
+    <interface-information xmlns="http://xml.juniper.net/junos/23.4R2/junos-interface" junos:style="terse">
+        <physical-interface>
+            <name>
+ge-0/0/0
+</name>
+            <admin-status>
+up
+</admin-status>
+            <oper-status>
+up
+</oper-status>
+            <logical-interface>
+                <name>
+ge-0/0/0.0
+</name>
+                <admin-status>
+up
+</admin-status>
+                <oper-status>
+up
+</oper-status>
+            </logical-interface>
+        </physical-interface>
+        <physical-interface>
+            <name>
+ge-0/0/1
+</name>
+            <admin-status>
+down
+</admin-status>
+            <oper-status>
+down
+</oper-status>
+        </physical-interface>
+        <physical-interface>
+            <name>
+ge-0/0/2
+</name>
+            <admin-status>
+up
+</admin-status>
+            <oper-status>
+down
+</oper-status>
+        </physical-interface>
+        <physical-interface>
+            <name>
+xe-0/2/0
+</name>
+            <admin-status>
+up
+</admin-status>
+            <oper-status>
+up
+</oper-status>
+        </physical-interface>
+        <physical-interface>
+            <name>
+irb
+</name>
+            <admin-status>
+up
+</admin-status>
+            <oper-status>
+up
+</oper-status>
+        </physical-interface>
+        <physical-interface>
+            <name>
+vme
+</name>
+            <admin-status>
+up
+</admin-status>
+            <oper-status>
+up
+</oper-status>
+        </physical-interface>
+    </interface-information>
+    <cli>
+        <banner>{master:0}</banner>
+    </cli>
+</rpc-reply>

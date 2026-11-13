@@ -2,6 +2,8 @@
 
 Scimitar reads Juniper EX, SRX, QFX and MX devices over SSH with a read-only login. Each device is added on its own.
 
+Any Junos release works, including 12.x. Scimitar uses an RSA key and reads XML output because older releases support nothing newer. The older SSH algorithms they need are only used when the device offers nothing else, and the device's host key is always checked.
+
 ## Add a device
 
 On the Scimitar machine:
@@ -15,7 +17,7 @@ It prints a few lines to paste into the device's CLI:
 ```
 configure
 set system login user scimitar class read-only
-set system login user scimitar authentication ssh-ed25519 "ssh-ed25519 AAAA... scimitar"
+set system login user scimitar authentication ssh-rsa "ssh-rsa AAAA... scimitar"
 set protocols lldp interface all
 commit and-quit
 ```
@@ -38,10 +40,10 @@ Only these commands, never anything else:
 
 | Command | Used for |
 |---|---|
-| `show version \| display json` | model, Junos version, up/down status |
-| `show interfaces terse \| display json` | ports and their state |
-| `show interfaces descriptions \| display json` | port labels |
-| `show lldp neighbors \| display json` | what each port is connected to |
+| `show version \| display xml` | model, Junos version, up/down status |
+| `show interfaces terse \| display xml` | ports and their state |
+| `show interfaces descriptions \| display xml` | port labels |
+| `show lldp neighbors \| display xml` | what each port is connected to |
 
 ## Settings
 

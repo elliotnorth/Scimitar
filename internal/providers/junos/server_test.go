@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/rsa"
 	"net"
 	"os"
 	"path/filepath"
@@ -29,13 +30,25 @@ type fakeDevice struct {
 }
 
 var exReplies = map[string]string{
-	cmdVersion:      "ex_version.json",
-	cmdPorts:        "ex_terse.json",
-	cmdDescriptions: "ex_descriptions.json",
-	cmdNeighbors:    "ex_lldp.json",
+	cmdVersion:      "ex_version.xml",
+	cmdPorts:        "ex_terse.xml",
+	cmdDescriptions: "ex_descriptions.xml",
+	cmdNeighbors:    "ex_lldp.xml",
 }
 
 func newFakeDevice(t *testing.T, replies map[string]string) *fakeDevice {
+	t.Helper()
+	return startFakeDevice(t, replies, false)
+}
+
+// newOldFakeDevice only speaks what Junos 12.x offers: an ssh-rsa host key,
+// the group14-sha1 key exchange and the aes128-cbc cipher.
+func newOldFakeDevice(t *testing.T, replies map[string]string) *fakeDevice {
+	t.Helper()
+	return startFakeDevice(t, replies, true)
+}
+
+func startFakeDevice(t *testing.T, replies map[string]string, old bool) *fakeDevice {
 	t.Helper()
 	dir := t.TempDir()
 	keyFile := filepath.Join(dir, "client_key")
@@ -43,14 +56,7 @@ func newFakeDevice(t *testing.T, replies map[string]string) *fakeDevice {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, hostPriv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	hostSigner, err := ssh.NewSignerFromKey(hostPriv)
-	if err != nil {
-		t.Fatal(err)
-	}
+	hostSigner := newHostKey(t, old)
 	dev := &fakeDevice{hostKey: ssh.FingerprintSHA256(hostSigner.PublicKey()), keyFile: keyFile, username: "scimitar", replies: replies}
 
 	allowed := client.PublicKey().Marshal()
@@ -63,6 +69,11 @@ func newFakeDevice(t *testing.T, replies map[string]string) *fakeDevice {
 		},
 	}
 	config.AddHostKey(hostSigner)
+	if old {
+		config.KeyExchanges = []string{ssh.InsecureKeyExchangeDH14SHA1}
+		config.Ciphers = []string{ssh.InsecureCipherAES128CBC}
+		config.MACs = []string{ssh.HMACSHA1}
+	}
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -80,6 +91,34 @@ func newFakeDevice(t *testing.T, replies map[string]string) *fakeDevice {
 		}
 	}()
 	return dev
+}
+
+func newHostKey(t *testing.T, old bool) ssh.Signer {
+	t.Helper()
+	if !old {
+		_, priv, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		signer, err := ssh.NewSignerFromKey(priv)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return signer
+	}
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer, err := ssh.NewSignerFromKey(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sha1Only, err := ssh.NewSignerWithAlgorithms(signer.(ssh.AlgorithmSigner), []string{ssh.KeyAlgoRSA})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sha1Only
 }
 
 type denied struct{}

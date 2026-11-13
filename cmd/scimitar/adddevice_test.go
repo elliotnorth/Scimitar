@@ -2,13 +2,17 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/elliotnorth/Scimitar/internal/providers/junos"
+	"golang.org/x/crypto/ssh"
 )
 
 const testHostKey = "SHA256:2bTQRn2yv7Y9tqFk9bVg1xg2n6oHq0W0n5n1o0b2c3d"
@@ -64,7 +68,7 @@ func TestAddDevice(t *testing.T) {
 		t.Fatalf("%v\n%s", err, ta.ti.out)
 	}
 	out := ta.ti.out.String()
-	for _, want := range []string{"set system login user scimitar authentication ssh-ed25519 \"ssh-ed25519 ", testHostKey, "EX3400-48P running Junos 23.4R2", "Added core-sw.home.lan"} {
+	for _, want := range []string{"set system login user scimitar authentication ssh-rsa \"ssh-rsa ", testHostKey, "EX3400-48P running Junos 23.4R2", "Added core-sw.home.lan"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q:\n%s", want, out)
 		}
@@ -161,5 +165,30 @@ func TestDeviceNameFrom(t *testing.T) {
 		if got := deviceNameFrom(in); got != want {
 			t.Errorf("%q: got %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestAddDeviceReplacesUnusedEd25519Key(t *testing.T) {
+	ta := newTestAdder(t, answers("", "10.0.0.2", "y", "", ""))
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, err := ssh.MarshalPrivateKey(priv, "scimitar")
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyPath := ta.ti.paths.dataDir.sshKey()
+	if err := os.MkdirAll(string(ta.ti.paths.dataDir), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(keyPath, pem.EncodeToMemory(block), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := ta.add(context.Background()); err != nil {
+		t.Fatalf("%v\n%s", err, ta.ti.out)
+	}
+	if !strings.Contains(ta.ti.out.String(), "authentication ssh-rsa \"ssh-rsa ") {
+		t.Fatalf("old key was not replaced:\n%s", ta.ti.out)
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/elliotnorth/Scimitar/internal/providers/junos"
 	"github.com/elliotnorth/Scimitar/internal/sshkey"
+	"golang.org/x/crypto/ssh"
 )
 
 // deviceAdder walks the user through adding a Juniper device to an existing install.
@@ -48,6 +49,13 @@ func (a deviceAdder) add(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if signer.PublicKey().Type() != ssh.KeyAlgoRSA && !hasJunos(cfg) {
+		// Keys made before Scimitar switched to RSA are not accepted by older Junos.
+		// Nothing uses the key yet, so it is safe to swap.
+		if signer, err = sshkey.Replace(keyPath); err != nil {
+			return err
+		}
+	}
 	if err := matchOwner(keyPath, string(cfg.DataDir)); err != nil {
 		return fmt.Errorf("set ssh key owner: %w", err)
 	}
@@ -56,7 +64,7 @@ func (a deviceAdder) add(ctx context.Context) error {
 	a.say("1. On the device, give Scimitar a read-only login. Paste these lines into its CLI:\n")
 	a.say("  configure")
 	a.say("  set system login user scimitar class read-only")
-	a.say("  set system login user scimitar authentication ssh-ed25519 \"%s\"", sshkey.AuthorizedKey(signer))
+	a.say("  set system login user scimitar authentication ssh-rsa \"%s\"", sshkey.AuthorizedKey(signer))
 	a.say("  set protocols lldp interface all")
 	a.say("  commit and-quit\n")
 	a.say("If a pasted line breaks, type \"load set terminal\" after configure, paste the set lines,")
@@ -104,6 +112,15 @@ func (a deviceAdder) add(ctx context.Context) error {
 	}
 	a.say("Added %s. Restart Scimitar to start reading it.", device.Name)
 	return nil
+}
+
+func hasJunos(cfg config) bool {
+	for _, p := range cfg.Providers {
+		if p.Type == "junos" {
+			return true
+		}
+	}
+	return false
 }
 
 func (a deviceAdder) askAddress(ctx context.Context) (address, fingerprint string, err error) {

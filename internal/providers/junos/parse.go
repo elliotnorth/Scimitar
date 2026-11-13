@@ -2,17 +2,19 @@ package junos
 
 import (
 	"bytes"
-	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"sort"
 	"strings"
 )
 
-// Junos "| display json" output wraps every value as [{"data": "..."}] and
-// nests results differently for standalone devices, virtual chassis and
-// clusters. These helpers search by key so all three shapes parse the same way.
+// Junos "| display xml" output is read into a tree where every element is a
+// map from child names to lists of children, and an element's text is stored
+// under "data". Results nest differently for standalone devices, virtual
+// chassis and clusters, so these helpers search by name and handle all three.
 
 type SystemInfo struct {
 	Hostname string
@@ -36,11 +38,46 @@ type Neighbor struct {
 var physicalPort = regexp.MustCompile(`^(ge|xe|et|mge|fe)-\d+/\d+/\d+$`)
 
 func decode(out []byte) (any, error) {
-	var v any
-	if err := json.Unmarshal(out, &v); err != nil {
-		return nil, fmt.Errorf("junos: unexpected output: %s", firstLine(string(out)))
+	unexpected := fmt.Errorf("junos: unexpected output: %s", firstLine(string(out)))
+	root := map[string]any{}
+	stack := []map[string]any{root}
+	var texts []*strings.Builder
+	dec := xml.NewDecoder(bytes.NewReader(out))
+	for {
+		tok, err := dec.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, unexpected
+		}
+		switch t := tok.(type) {
+		case xml.StartElement:
+			child := map[string]any{}
+			parent := stack[len(stack)-1]
+			list, _ := parent[t.Name.Local].([]any)
+			parent[t.Name.Local] = append(list, child)
+			stack = append(stack, child)
+			texts = append(texts, &strings.Builder{})
+		case xml.CharData:
+			if len(texts) > 0 {
+				texts[len(texts)-1].Write(t)
+			}
+		case xml.EndElement:
+			if len(texts) == 0 {
+				return nil, unexpected
+			}
+			if s := strings.TrimSpace(texts[len(texts)-1].String()); s != "" {
+				stack[len(stack)-1]["data"] = s
+			}
+			stack = stack[:len(stack)-1]
+			texts = texts[:len(texts)-1]
+		}
 	}
-	return v, nil
+	if len(root) == 0 || len(stack) != 1 {
+		return nil, unexpected
+	}
+	return root, nil
 }
 
 // find returns the first value stored under key, searching depth first in a fixed order.

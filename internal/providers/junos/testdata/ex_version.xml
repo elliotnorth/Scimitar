@@ -1,0 +1,15 @@
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/23.4R2/junos">
+    <software-information>
+        <host-name>ex3400</host-name>
+        <product-model>ex3400-48p</product-model>
+        <product-name>ex3400-48p</product-name>
+        <junos-version>23.4R2-S2.1</junos-version>
+        <package-information>
+            <name>junos</name>
+            <comment>JUNOS Base OS boot [23.4R2-S2.1]</comment>
+        </package-information>
+    </software-information>
+    <cli>
+        <banner>{master:0}</banner>
+    </cli>
+</rpc-reply>

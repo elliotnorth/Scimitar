@@ -1,0 +1,16 @@
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/23.4R2/junos">
+    <interface-information xmlns="http://xml.juniper.net/junos/23.4R2/junos-interface" junos:style="description">
+        <physical-interface>
+            <name>ge-0/0/0</name>
+            <admin-status>up</admin-status>
+            <oper-status>up</oper-status>
+            <description>pve mgmt</description>
+        </physical-interface>
+        <physical-interface>
+            <name>ge-0/0/1</name>
+            <admin-status>down</admin-status>
+            <oper-status>down</oper-status>
+            <description>guest desk</description>
+        </physical-interface>
+    </interface-information>
+</rpc-reply>

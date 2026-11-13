@@ -27,7 +27,7 @@ func TestLoadOrCreateMakesAPrivateKeyOnce(t *testing.T) {
 	if AuthorizedKey(first) != AuthorizedKey(second) {
 		t.Fatal("second call made a new key")
 	}
-	if line := AuthorizedKey(first); !strings.HasPrefix(line, "ssh-ed25519 ") || !strings.HasSuffix(line, " scimitar") {
+	if line := AuthorizedKey(first); !strings.HasPrefix(line, "ssh-rsa ") || !strings.HasSuffix(line, " scimitar") {
 		t.Fatalf("unexpected authorized key line %q", line)
 	}
 }
@@ -39,5 +39,20 @@ func TestLoadDoesNotCreate(t *testing.T) {
 	}
 	if _, err := os.Stat(path); err == nil {
 		t.Fatal("Load created a key")
+	}
+}
+
+func TestReplaceMakesANewKey(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ssh_key")
+	first, err := LoadOrCreate(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := Replace(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if AuthorizedKey(first) == AuthorizedKey(second) {
+		t.Fatal("Replace kept the old key")
 	}
 }

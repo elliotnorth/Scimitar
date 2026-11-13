@@ -21,6 +21,7 @@ const (
 
 // Host key types in the order Scimitar asks for them. The order is fixed so the
 // key fingerprinted at setup is the same one offered on every later connection.
+// Plain ssh-rsa comes last for Junos releases older than 15.1, which offer nothing else.
 var hostKeyAlgorithms = []string{
 	ssh.KeyAlgoED25519,
 	ssh.KeyAlgoECDSA256,
@@ -28,6 +29,19 @@ var hostKeyAlgorithms = []string{
 	ssh.KeyAlgoECDSA521,
 	ssh.KeyAlgoRSASHA512,
 	ssh.KeyAlgoRSASHA256,
+	ssh.KeyAlgoRSA,
+}
+
+// withOlderJunos adds the SHA-1 key exchanges and the CBC cipher that Junos 12.x
+// still needs, after every modern choice so they are only used when nothing
+// else is offered. The pinned host key still rules out impersonation.
+func withOlderJunos(config *ssh.ClientConfig) *ssh.ClientConfig {
+	supported := ssh.SupportedAlgorithms()
+	config.HostKeyAlgorithms = hostKeyAlgorithms
+	config.KeyExchanges = append(supported.KeyExchanges, ssh.InsecureKeyExchangeDH14SHA1, ssh.InsecureKeyExchangeDHGEXSHA1)
+	config.Ciphers = append(supported.Ciphers, ssh.InsecureCipherAES128CBC)
+	config.MACs = supported.MACs
+	return config
 }
 
 var errOutputTooLarge = errors.New("output too large")
@@ -188,14 +202,13 @@ func FetchHostKey(ctx context.Context, address string) (fingerprint, keyType str
 	}
 	var key ssh.PublicKey
 	errCaptured := errors.New("host key captured")
-	config := &ssh.ClientConfig{
-		User:              "scimitar",
-		HostKeyAlgorithms: hostKeyAlgorithms,
+	config := withOlderJunos(&ssh.ClientConfig{
+		User: "scimitar",
 		HostKeyCallback: func(_ string, _ net.Addr, k ssh.PublicKey) error {
 			key = k
 			return errCaptured
 		},
-	}
+	})
 	client, err := dial(ctx, addr, config)
 	if client != nil {
 		client.Close()
