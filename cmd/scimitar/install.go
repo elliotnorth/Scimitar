@@ -236,7 +236,7 @@ func (i installer) printDone(listen, password, certFP string) {
 	i.say("  Open:      https://%s", net.JoinHostPort(host, port))
 	if password != "" {
 		i.say("  Password:  %s", password)
-		i.say("             Write it down. It is shown only once.")
+		i.say("             It is shown only once. Change it to your own under Settings.")
 	} else {
 		i.say("  Password:  unchanged from your previous install")
 	}
@@ -245,7 +245,7 @@ func (i installer) printDone(listen, password, certFP string) {
 	i.say("\nUseful commands:")
 	i.say("  scimitar status                 see if it is running")
 	i.say("  sudo scimitar update            get the newest version")
-	i.say("  sudo scimitar reset-password    forgot the password")
+	i.say("  sudo scimitar set-password      forgot the password")
 	i.say("  sudo scimitar uninstall         remove it")
 }
 

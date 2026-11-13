@@ -17,9 +17,9 @@ func TestDiscoverDevices(t *testing.T) {
 	want := []domain.Device{
 		{ID: "proxmox/node/pve1", Name: "pve1", Kind: domain.DeviceHost, Provider: "proxmox", Status: domain.StatusUp},
 		{ID: "proxmox/node/pve2", Name: "pve2", Kind: domain.DeviceHost, Provider: "proxmox", Status: domain.StatusDown},
-		{ID: "proxmox/guest/101", Name: "immich", Kind: domain.DeviceVM, Provider: "proxmox", Status: domain.StatusUp},
+		{ID: "proxmox/guest/101", Name: "immich", Kind: domain.DeviceVM, Provider: "proxmox", Status: domain.StatusUp, Addresses: []string{"192.168.1.50"}},
 		{ID: "proxmox/guest/102", Name: "nextcloud-old", Kind: domain.DeviceVM, Provider: "proxmox", Status: domain.StatusDown},
-		{ID: "proxmox/guest/200", Name: "ct-200", Kind: domain.DeviceContainer, Provider: "proxmox", Status: domain.StatusUp},
+		{ID: "proxmox/guest/200", Name: "ct-200", Kind: domain.DeviceContainer, Provider: "proxmox", Status: domain.StatusUp, Addresses: []string{"192.168.1.60"}},
 		{ID: "proxmox/guest/201", Name: "jellyfin", Kind: domain.DeviceContainer, Provider: "proxmox", Status: domain.StatusUnknown},
 	}
 	if !reflect.DeepEqual(d.Devices, want) {

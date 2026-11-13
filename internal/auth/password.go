@@ -9,6 +9,17 @@ import (
 )
 
 const (
+	MinPasswordLength = 8
+	MaxPasswordLength = 256
+)
+
+// ValidPassword reports whether a password chosen by the user is long enough to accept.
+func ValidPassword(password string) bool {
+	n := len([]rune(password))
+	return n >= MinPasswordLength && n <= MaxPasswordLength
+}
+
+const (
 	iterations = 600_000
 	keyLength  = 32
 	saltLength = 16

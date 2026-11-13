@@ -35,9 +35,8 @@ func TestLoadConfigDefaults(t *testing.T) {
 
 func TestLoadConfigErrors(t *testing.T) {
 	cases := map[string]string{
-		"not json":     `{`,
-		"no providers": `{"providers": []}`,
-		"zero status":  `{"status_seconds": 0, "providers": [{"type": "proxmox"}]}`,
+		"not json":    `{`,
+		"zero status": `{"status_seconds": 0, "providers": [{"type": "proxmox"}]}`,
 	}
 	for name, body := range cases {
 		if _, err := loadConfig(writeConfig(t, body)); err == nil {

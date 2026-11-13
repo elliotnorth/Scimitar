@@ -5,6 +5,7 @@ import (
 
 	"github.com/elliotnorth/Scimitar/internal/core"
 	"github.com/elliotnorth/Scimitar/internal/domain"
+	"github.com/elliotnorth/Scimitar/internal/providers/custom"
 )
 
 type deviceView struct {
@@ -13,6 +14,9 @@ type deviceView struct {
 	Kind     domain.DeviceKind `json:"kind"`
 	Provider string            `json:"provider"`
 	Status   domain.Status     `json:"status"`
+	Address  string            `json:"address"`
+	// Custom marks a device the user added by hand and can remove.
+	Custom bool `json:"custom"`
 }
 
 type serviceView struct {
@@ -21,6 +25,9 @@ type serviceView struct {
 	CatalogID string        `json:"catalog_id"`
 	DeviceID  string        `json:"device_id"`
 	Status    domain.Status `json:"status"`
+	URL       string        `json:"url"`
+	// CustomURL is true when the user typed the address themselves.
+	CustomURL bool `json:"custom_url"`
 }
 
 type linkView struct {
@@ -51,6 +58,7 @@ type snapshotView struct {
 	Links     []linkView        `json:"links"`
 	Review    []reviewView      `json:"review"`
 	Answered  []answerView      `json:"answered"`
+	Events    []core.Event      `json:"events"`
 	Providers []string          `json:"providers"`
 	Errors    map[string]string `json:"errors"`
 	UpdatedAt *time.Time        `json:"updated_at"`
@@ -73,6 +81,7 @@ func toSnapshotView(s core.Snapshot) snapshotView {
 		Links:     make([]linkView, len(s.Links)),
 		Review:    make([]reviewView, len(s.Review)),
 		Answered:  make([]answerView, len(s.Answered)),
+		Events:    append([]core.Event{}, s.Events...),
 		Providers: append([]string{}, s.Providers...),
 		Errors:    s.Errors,
 	}
@@ -83,10 +92,13 @@ func toSnapshotView(s core.Snapshot) snapshotView {
 		v.UpdatedAt = &s.UpdatedAt
 	}
 	for i, d := range s.Devices {
-		v.Devices[i] = deviceView{ID: d.ID, Name: d.Name, Kind: d.Kind, Provider: d.Provider, Status: d.Status}
+		v.Devices[i] = deviceView{ID: d.ID, Name: d.Name, Kind: d.Kind, Provider: d.Provider, Status: d.Status, Custom: d.Provider == custom.Name}
+		if len(d.Addresses) > 0 {
+			v.Devices[i].Address = d.Addresses[0]
+		}
 	}
 	for i, svc := range s.Services {
-		v.Services[i] = serviceView{ID: svc.ID, Name: svc.Name, CatalogID: svc.CatalogID, DeviceID: svc.DeviceID, Status: svc.Status}
+		v.Services[i] = serviceView{ID: svc.ID, Name: svc.Name, CatalogID: svc.CatalogID, DeviceID: svc.DeviceID, Status: svc.Status, URL: svc.URL, CustomURL: svc.URLSet}
 	}
 	for i, l := range s.Links {
 		v.Links[i] = linkView{From: l.From, To: l.To, Kind: l.Kind}

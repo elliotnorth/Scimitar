@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -119,5 +120,54 @@ func TestGuardPrunesExpiredSessions(t *testing.T) {
 	g.Login("pw")
 	if len(g.sessions) != 1 {
 		t.Fatalf("expired session kept: %d", len(g.sessions))
+	}
+}
+
+func TestChangePassword(t *testing.T) {
+	g, _, sleeps := newTestGuard(t)
+	path := filepath.Join(t.TempDir(), "auth.json")
+	g.SaveWith(SaveTo(path))
+	old, _, _ := g.Login("pw")
+
+	if _, err := g.ChangePassword("wrong", "a-new-password"); !errors.Is(err, ErrWrongPassword) || *sleeps != 1 {
+		t.Fatalf("wrong current password: %v, sleeps %d", err, *sleeps)
+	}
+	if _, err := g.ChangePassword("pw", "short"); !errors.Is(err, ErrWeakPassword) {
+		t.Fatalf("short password: %v", err)
+	}
+	if !g.Valid(old) {
+		t.Fatal("failed change ended the session")
+	}
+
+	token, err := g.ChangePassword("pw", "a-new-password")
+	if err != nil || !g.Valid(token) {
+		t.Fatalf("change: %v", err)
+	}
+	if g.Valid(old) {
+		t.Fatal("old session survived the password change")
+	}
+	if _, ok, _ := g.Login("pw"); ok {
+		t.Fatal("old password still works")
+	}
+	if _, ok, _ := g.Login("a-new-password"); !ok {
+		t.Fatal("new password does not work")
+	}
+	saved, generated, err := LoadOrCreate(path)
+	if err != nil || generated != "" || !saved.Matches("a-new-password") {
+		t.Fatalf("new password was not saved: %v", err)
+	}
+}
+
+func TestSetPassword(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "auth.json")
+	if err := Set(path, "short"); !errors.Is(err, ErrWeakPassword) {
+		t.Fatalf("short password: %v", err)
+	}
+	if err := Set(path, "correct horse battery"); err != nil {
+		t.Fatal(err)
+	}
+	hash, _, err := LoadOrCreate(path)
+	if err != nil || !hash.Matches("correct horse battery") {
+		t.Fatalf("not saved: %v", err)
 	}
 }

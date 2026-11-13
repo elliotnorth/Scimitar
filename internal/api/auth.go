@@ -2,10 +2,13 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"mime"
 	"net/http"
 	"time"
+
+	"github.com/elliotnorth/Scimitar/internal/auth"
 )
 
 const sessionCookie = "scimitar_session"
@@ -15,6 +18,7 @@ type Auth interface {
 	Valid(token string) bool
 	Logout(token string)
 	SessionTTL() time.Duration
+	ChangePassword(current, next string) (token string, err error)
 }
 
 func requireSession(auth Auth, next http.HandlerFunc) http.Handler {
@@ -54,15 +58,43 @@ func (h authHandlers) login(w http.ResponseWriter, r *http.Request) {
 	case !ok:
 		writeError(w, http.StatusUnauthorized, "wrong password")
 	default:
-		http.SetCookie(w, &http.Cookie{
-			Name:     sessionCookie,
-			Value:    token,
-			Path:     "/",
-			MaxAge:   int(h.auth.SessionTTL().Seconds()),
-			HttpOnly: true,
-			Secure:   true,
-			SameSite: http.SameSiteStrictMode,
-		})
+		h.startSession(w, token)
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func (h authHandlers) startSession(w http.ResponseWriter, token string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookie,
+		Value:    token,
+		Path:     "/",
+		MaxAge:   int(h.auth.SessionTTL().Seconds()),
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func (h authHandlers) changePassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Current string `json:"current"`
+		New     string `json:"new"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	token, err := h.auth.ChangePassword(req.Current, req.New)
+	switch {
+	// Not 401: that means "log in again", and this person is logged in.
+	case errors.Is(err, auth.ErrWrongPassword):
+		writeError(w, http.StatusForbidden, err.Error())
+	case errors.Is(err, auth.ErrWeakPassword):
+		writeError(w, http.StatusBadRequest, err.Error())
+	case err != nil:
+		slog.Error("changing password failed", "err", err)
+		writeError(w, http.StatusInternalServerError, "could not save the new password")
+	default:
+		h.startSession(w, token)
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

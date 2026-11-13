@@ -11,9 +11,18 @@ func (inv *Inventory) Discover(ctx context.Context) {
 	for _, p := range inv.registry.Providers() {
 		inv.discover(ctx, p)
 	}
-	inv.mu.Lock()
-	inv.rebuild()
-	inv.mu.Unlock()
+	inv.settle(ctx)
+}
+
+// DiscoverProvider runs discovery for one provider right away, for example
+// after the user added a device to it.
+func (inv *Inventory) DiscoverProvider(ctx context.Context, name string) {
+	for _, p := range inv.registry.Providers() {
+		if p.Name() == name {
+			inv.discover(ctx, p)
+		}
+	}
+	inv.settle(ctx)
 }
 
 func (inv *Inventory) discover(ctx context.Context, p domain.Provider) error {
@@ -48,9 +57,7 @@ func (inv *Inventory) RefreshStatus(ctx context.Context) {
 		}
 		inv.mu.Unlock()
 	}
-	inv.mu.Lock()
-	inv.rebuild()
-	inv.mu.Unlock()
+	inv.settle(ctx)
 }
 
 func (inv *Inventory) discoveryFailed(provider string) bool {

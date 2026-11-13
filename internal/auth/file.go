@@ -48,6 +48,23 @@ func reset(path string) (string, PasswordHash, error) {
 	return password, hash, nil
 }
 
+// Set stores a password chosen by the user.
+func Set(path, password string) error {
+	if !ValidPassword(password) {
+		return ErrWeakPassword
+	}
+	hash, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
+	return writePrivate(path, hash)
+}
+
+// SaveTo returns a function that writes a password hash to path.
+func SaveTo(path string) func(PasswordHash) error {
+	return func(hash PasswordHash) error { return writePrivate(path, hash) }
+}
+
 func writePrivate(path string, v any) error {
 	data, err := json.Marshal(v)
 	if err != nil {

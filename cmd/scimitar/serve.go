@@ -12,9 +12,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/elliotnorth/Scimitar/internal/alerts"
 	"github.com/elliotnorth/Scimitar/internal/api"
 	"github.com/elliotnorth/Scimitar/internal/auth"
 	"github.com/elliotnorth/Scimitar/internal/core"
+	"github.com/elliotnorth/Scimitar/internal/probe"
+	"github.com/elliotnorth/Scimitar/internal/providers/custom"
 	"github.com/elliotnorth/Scimitar/internal/sshkey"
 	"github.com/elliotnorth/Scimitar/web"
 )
@@ -41,7 +44,27 @@ func serve(configPath string) error {
 	if err != nil {
 		return err
 	}
+	devices, err := custom.Open(cfg.DataDir.devices())
+	if err != nil {
+		return err
+	}
+	if err := registry.Register(devices); err != nil {
+		return err
+	}
+	notifier, err := alerts.Open(cfg.DataDir.alerts())
+	if err != nil {
+		return err
+	}
 	inventory, err := core.NewInventory(registry, core.DefaultCatalog, core.FileDecisions{Path: cfg.DataDir.decisions()})
+	if err != nil {
+		return err
+	}
+	err = inventory.Configure(core.Extras{
+		Prober:  probe.New(),
+		AppURLs: core.FileAppURLs{Path: cfg.DataDir.appURLs()},
+		Events:  core.FileEvents{Path: cfg.DataDir.events()},
+		Notify:  notifier.Notify,
+	})
 	if err != nil {
 		return err
 	}
@@ -50,7 +73,7 @@ func serve(configPath string) error {
 		return fmt.Errorf("load auth: %w", err)
 	}
 	if generated != "" {
-		fmt.Fprintf(os.Stderr, "\nAdmin password: %s\nIt is shown only once. Run 'scimitar reset-password' to get a new one.\n\n", generated)
+		fmt.Fprintf(os.Stderr, "\nAdmin password: %s\nIt is shown only once. Change it under Settings, or run 'scimitar set-password'.\n\n", generated)
 	}
 	cert, err := loadOrCreateCert(cfg.DataDir.cert(), cfg.DataDir.key())
 	if err != nil {
@@ -60,9 +83,11 @@ func serve(configPath string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	guard := auth.NewGuard(password, sessionTTL)
+	guard.SaveWith(auth.SaveTo(cfg.DataDir.auth()))
 	server := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           api.NewHandler(inventory, auth.NewGuard(password, sessionTTL), web.Files(), api.Info{Version: version}),
+		Handler:           api.NewHandler(inventory, guard, web.Files(), api.Info{Version: version}, api.Options{Devices: devices, Alerts: notifier}),
 		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}},
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

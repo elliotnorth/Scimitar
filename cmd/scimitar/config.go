@@ -36,9 +36,6 @@ func loadConfig(path string) (config, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return cfg, fmt.Errorf("parse %s: %w", path, err)
 	}
-	if len(cfg.Providers) == 0 {
-		return cfg, errors.New("config has no providers")
-	}
 	if cfg.DiscoverSeconds <= 0 || cfg.StatusSeconds <= 0 {
 		return cfg, errors.New("discover_seconds and status_seconds must be positive")
 	}

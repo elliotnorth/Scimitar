@@ -232,3 +232,56 @@ func printSSHKey(configPath string) error {
 	fmt.Println(sshkey.AuthorizedKey(signer))
 	return nil
 }
+
+// remove takes a Juniper device out of the config again.
+func (a deviceAdder) remove() error {
+	cfg, err := loadConfig(a.configPath)
+	if err != nil {
+		return fmt.Errorf("could not read the Scimitar config (%w). Is Scimitar installed? Run: sudo scimitar install", err)
+	}
+	var names []string
+	for _, p := range cfg.Providers {
+		if p.Type == "junos" {
+			names = append(names, providerName(p))
+		}
+	}
+	if len(names) == 0 {
+		a.say("There are no Juniper devices to remove. Devices added in the web page are removed there.")
+		return nil
+	}
+	a.say("Juniper devices in Scimitar:\n")
+	for _, name := range names {
+		a.say("  %s", name)
+	}
+	a.say("")
+	for {
+		name, err := a.required("Which one should be removed?")
+		if err != nil {
+			return err
+		}
+		kept := cfg.Providers[:0:0]
+		for _, p := range cfg.Providers {
+			if p.Type != "junos" || providerName(p) != name {
+				kept = append(kept, p)
+			}
+		}
+		if len(kept) == len(cfg.Providers) {
+			a.say("There is no device called %s.", name)
+			continue
+		}
+		cfg.Providers = kept
+		if err := saveConfig(a.configPath, cfg); err != nil {
+			return fmt.Errorf("save config: %w", err)
+		}
+		if fileExists(a.paths.unit) && a.configPath == a.paths.configFile() {
+			if err := a.run("systemctl", "restart", "scimitar"); err != nil {
+				return err
+			}
+			a.say("Removed %s. Scimitar restarted.", name)
+		} else {
+			a.say("Removed %s. Restart Scimitar for it to take effect.", name)
+		}
+		a.say("The read-only login is still on the device. To remove it there: delete system login user scimitar")
+		return nil
+	}
+}

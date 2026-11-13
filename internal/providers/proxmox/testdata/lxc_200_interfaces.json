@@ -1,0 +1,7 @@
+{
+  "data": [
+    {"name": "lo", "hwaddr": "00:00:00:00:00:00", "inet": "127.0.0.1/8", "inet6": "::1/128"},
+    {"name": "docker0", "hwaddr": "02:42:aa:bb:cc:dd", "inet": "172.17.0.1/16"},
+    {"name": "eth0", "hwaddr": "bc:24:11:aa:bb:cc", "inet": "192.168.1.60/24", "inet6": "fe80::be24:11ff:feaa:bbcc/64"}
+  ]
+}

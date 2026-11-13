@@ -12,8 +12,10 @@ import (
 const maxRequestBody = 64 << 10
 
 type handlers struct {
-	inv  Inventory
-	info Info
+	inv     Inventory
+	info    Info
+	devices Devices
+	alerts  Alerts
 }
 
 func (h handlers) infoHandler(w http.ResponseWriter, _ *http.Request) {

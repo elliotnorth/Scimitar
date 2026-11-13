@@ -21,6 +21,9 @@ var fixtureRoutes = map[string]string{
 	"/api2/json/nodes/pve1/qemu/101/config": "qemu_101_config.json",
 	"/api2/json/nodes/pve1/qemu/102/config": "qemu_102_config.json",
 	"/api2/json/nodes/pve1/lxc/200/config":  "lxc_200_config.json",
+
+	"/api2/json/nodes/pve1/lxc/200/interfaces":                    "lxc_200_interfaces.json",
+	"/api2/json/nodes/pve1/qemu/101/agent/network-get-interfaces": "qemu_101_agent.json",
 }
 
 func newFixtureServer(t *testing.T) *httptest.Server {

@@ -15,6 +15,7 @@ type Snapshot struct {
 	Links     []domain.Link
 	Review    []ReviewItem
 	Answered  []Answer
+	Events    []Event
 	Providers []string
 	Errors    map[string]string
 	UpdatedAt time.Time
@@ -41,10 +42,19 @@ type Inventory struct {
 	store    DecisionStore
 	now      func() time.Time
 
+	prober     Prober
+	urlStore   AppURLStore
+	eventStore EventStore
+	notify     func([]Event)
+
 	mu        sync.RWMutex
 	states    map[string]*providerState
 	decisions Decisions
 	snapshot  Snapshot
+	appURLs   map[string]string
+	appStatus map[string]domain.Status
+	lastKnown map[string]domain.Status
+	events    []Event
 }
 
 func NewInventory(registry *Registry, catalog []CatalogEntry, store DecisionStore) (*Inventory, error) {
@@ -59,6 +69,9 @@ func NewInventory(registry *Registry, catalog []CatalogEntry, store DecisionStor
 		now:       time.Now,
 		states:    map[string]*providerState{},
 		decisions: decisions,
+		appURLs:   map[string]string{},
+		appStatus: map[string]domain.Status{},
+		lastKnown: map[string]domain.Status{},
 	}, nil
 }
 

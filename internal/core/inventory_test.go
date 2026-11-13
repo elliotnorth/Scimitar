@@ -273,3 +273,164 @@ func TestUndoKeepsStateWhenSaveFails(t *testing.T) {
 		t.Fatalf("undo applied although it was not saved: %+v", s)
 	}
 }
+
+type fakeProber struct {
+	down map[string]bool
+	seen []string
+}
+
+func (f *fakeProber) Check(_ context.Context, target string) bool {
+	f.seen = append(f.seen, target)
+	return !f.down[target]
+}
+
+type memoryURLs struct{ saved map[string]string }
+
+func (m *memoryURLs) Load() (map[string]string, error) { return map[string]string{}, nil }
+func (m *memoryURLs) Save(urls map[string]string) error {
+	m.saved = urls
+	return nil
+}
+
+type memoryEvents struct{ saved []Event }
+
+func (m *memoryEvents) Load() ([]Event, error) { return nil, nil }
+func (m *memoryEvents) Save(events []Event) error {
+	m.saved = events
+	return nil
+}
+
+func serviceByID(t *testing.T, inv *Inventory, id string) domain.Service {
+	t.Helper()
+	for _, s := range inv.Snapshot().Services {
+		if s.ID == id {
+			return s
+		}
+	}
+	t.Fatalf("no service %s", id)
+	return domain.Service{}
+}
+
+func TestAppIsCheckedAtItsAddress(t *testing.T) {
+	inv, provider := newLabInventory(t, &memoryDecisions{})
+	prober := &fakeProber{down: map[string]bool{}}
+	urls := &memoryURLs{}
+	if err := inv.Configure(Extras{Prober: prober, AppURLs: urls}); err != nil {
+		t.Fatal(err)
+	}
+	inv.Discover(context.Background())
+	const immich = "lab/guest/101/immich"
+
+	// No address known for the device and none set: nothing to check.
+	if s := serviceByID(t, inv, immich); s.Status != domain.StatusUnknown || s.URL != "" || len(prober.seen) != 0 {
+		t.Fatalf("unchecked app: %+v, probed %v", s, prober.seen)
+	}
+
+	// A device address gives the app its usual port.
+	provider.discovery.Devices[1].Addresses = []string{"10.0.0.5"}
+	inv.Discover(context.Background())
+	if s := serviceByID(t, inv, immich); s.Status != domain.StatusUp || s.URL != "http://10.0.0.5:2283" || s.URLSet {
+		t.Fatalf("automatic address: %+v", s)
+	}
+
+	// The user's own address wins and is saved.
+	if err := inv.SetAppURL(immich, "photos.lan"); err != nil {
+		t.Fatal(err)
+	}
+	prober.down["http://photos.lan"] = true
+	inv.CheckApps(context.Background())
+	if s := serviceByID(t, inv, immich); s.Status != domain.StatusDown || s.URL != "http://photos.lan" || !s.URLSet {
+		t.Fatalf("own address: %+v", s)
+	}
+	if urls.saved[immich] != "http://photos.lan" {
+		t.Fatalf("address not saved: %v", urls.saved)
+	}
+
+	// Clearing it goes back to the automatic one.
+	if err := inv.SetAppURL(immich, " "); err != nil {
+		t.Fatal(err)
+	}
+	inv.CheckApps(context.Background())
+	if s := serviceByID(t, inv, immich); s.Status != domain.StatusUp || s.URLSet {
+		t.Fatalf("after clearing: %+v", s)
+	}
+
+	if err := inv.SetAppURL(immich, "ftp://x"); !errors.Is(err, ErrInvalidAddress) {
+		t.Errorf("bad address: got %v", err)
+	}
+	if err := inv.SetAppURL("lab/guest/999/immich", "x.lan"); !errors.Is(err, ErrUnknownService) {
+		t.Errorf("unknown app: got %v", err)
+	}
+}
+
+func TestAppOnDownDeviceIsNotChecked(t *testing.T) {
+	inv, provider := newLabInventory(t, &memoryDecisions{})
+	prober := &fakeProber{}
+	inv.Configure(Extras{Prober: prober})
+	provider.discovery.Devices[1].Addresses = []string{"10.0.0.5"}
+	provider.discovery.Devices[1].Status = domain.StatusDown
+	inv.Discover(context.Background())
+	if s := serviceByID(t, inv, "lab/guest/101/immich"); s.Status != domain.StatusDown || len(prober.seen) != 0 {
+		t.Fatalf("got %+v, probed %v", s, prober.seen)
+	}
+}
+
+func TestEventsRecordChangesOnly(t *testing.T) {
+	inv, provider := newLabInventory(t, &memoryDecisions{})
+	prober := &fakeProber{down: map[string]bool{}}
+	store := &memoryEvents{}
+	var notified []Event
+	inv.Configure(Extras{Prober: prober, Events: store, Notify: func(e []Event) { notified = append(notified, e...) }})
+	provider.discovery.Devices[1].Addresses = []string{"10.0.0.5"}
+	ctx := context.Background()
+
+	inv.Discover(ctx)
+	inv.RefreshStatus(ctx)
+	if len(notified) != 0 || len(inv.Snapshot().Events) != 0 {
+		t.Fatalf("first sighting made events: %+v", notified)
+	}
+
+	// The app stops answering while its VM stays up.
+	prober.down["http://10.0.0.5:2283"] = true
+	inv.RefreshStatus(ctx)
+	if len(notified) != 1 || notified[0].Subject != SubjectApp || notified[0].Status != domain.StatusDown || notified[0].Name != "Immich" {
+		t.Fatalf("app down: %+v", notified)
+	}
+
+	// The VM goes down: one device event, and no second event for its app.
+	provider.status = map[string]domain.Status{"lab/node/pve1": domain.StatusUp, "lab/guest/101": domain.StatusDown, "lab/guest/102": domain.StatusDown}
+	inv.RefreshStatus(ctx)
+	if len(notified) != 2 || notified[1].Subject != SubjectDevice || notified[1].ID != "lab/guest/101" || notified[1].Status != domain.StatusDown {
+		t.Fatalf("device down: %+v", notified)
+	}
+
+	// The source fails, then everything comes back.
+	provider.err = errUnreachable
+	inv.RefreshStatus(ctx)
+	if len(notified) != 3 || notified[2].Subject != SubjectSource || notified[2].Detail != "unreachable" {
+		t.Fatalf("source down: %+v", notified)
+	}
+	provider.err = nil
+	provider.status["lab/guest/101"] = domain.StatusUp
+	delete(prober.down, "http://10.0.0.5:2283")
+	inv.RefreshStatus(ctx)
+	if len(notified) != 6 {
+		t.Fatalf("recovery: %+v", notified[3:])
+	}
+	for _, e := range notified[3:] {
+		if e.Status != domain.StatusUp {
+			t.Errorf("recovery event is not up: %+v", e)
+		}
+	}
+
+	shown := inv.Snapshot().Events
+	if len(shown) != 6 || len(store.saved) != 6 || shown[0].Status != domain.StatusUp || shown[5].Subject != SubjectApp {
+		t.Fatalf("history: shown %d, saved %d", len(shown), len(store.saved))
+	}
+
+	// Nothing changed: nothing new.
+	inv.RefreshStatus(ctx)
+	if len(notified) != 6 {
+		t.Fatal("event without a change")
+	}
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -209,5 +210,44 @@ func TestAddDeviceRefusesAddressAlreadyAdded(t *testing.T) {
 	cfg, _ := loadConfig(first.ti.paths.configFile())
 	if len(cfg.Providers) != 3 {
 		t.Fatalf("providers: %+v", cfg.Providers)
+	}
+}
+
+func TestRemoveDevice(t *testing.T) {
+	ta := newTestAdder(t, answers("", "10.0.0.2", "y", "", ""))
+	if err := ta.add(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	ta.prompter.in = bufio.NewReader(strings.NewReader(answers("nope", "core-sw.home.lan")))
+	if err := ta.remove(); err != nil {
+		t.Fatalf("%v\n%s", err, ta.ti.out)
+	}
+	out := ta.ti.out.String()
+	for _, want := range []string{"There is no device called nope", "Removed core-sw.home.lan. Scimitar restarted", "delete system login user scimitar"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q:\n%s", want, out)
+		}
+	}
+	cfg, err := loadConfig(ta.ti.paths.configFile())
+	if err != nil || len(cfg.Providers) != 1 || cfg.Providers[0].Type != "proxmox" {
+		t.Fatalf("config after remove: %+v %v", cfg.Providers, err)
+	}
+
+	ta.ti.out.Reset()
+	if err := ta.remove(); err != nil || !strings.Contains(ta.ti.out.String(), "no Juniper devices to remove") {
+		t.Fatalf("nothing left: %v\n%s", err, ta.ti.out)
+	}
+}
+
+func TestChoosePassword(t *testing.T) {
+	out := &bytes.Buffer{}
+	p := prompter{in: bufio.NewReader(strings.NewReader(answers("short", "long enough 1", "typo", "long enough 2", "long enough 2"))), out: out}
+	visible := func(p prompter, question string) (string, error) { return p.required(question) }
+	got, err := choosePassword(p, visible)
+	if err != nil || got != "long enough 2" {
+		t.Fatalf("got %q %v", got, err)
+	}
+	if !strings.Contains(out.String(), "too short") || !strings.Contains(out.String(), "did not match") {
+		t.Fatalf("missing hints:\n%s", out)
 	}
 }

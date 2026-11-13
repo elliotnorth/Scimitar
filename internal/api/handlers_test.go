@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -12,8 +13,11 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/elliotnorth/Scimitar/internal/alerts"
+	"github.com/elliotnorth/Scimitar/internal/auth"
 	"github.com/elliotnorth/Scimitar/internal/core"
 	"github.com/elliotnorth/Scimitar/internal/domain"
+	"github.com/elliotnorth/Scimitar/internal/providers/custom"
 )
 
 type fakeInventory struct {
@@ -22,6 +26,10 @@ type fakeInventory struct {
 	decided   [2]string
 	undone    string
 	undoErr   error
+	appURL    [2]string
+	appURLErr error
+	checked   int
+	refreshed string
 	details   []domain.Detail
 	detailErr error
 }
@@ -41,6 +49,15 @@ func (f *fakeInventory) Undo(key string) error {
 	f.undone = key
 	return f.undoErr
 }
+
+func (f *fakeInventory) SetAppURL(id, address string) error {
+	f.appURL = [2]string{id, address}
+	return f.appURLErr
+}
+
+func (f *fakeInventory) CheckApps(context.Context) { f.checked++ }
+
+func (f *fakeInventory) DiscoverProvider(_ context.Context, name string) { f.refreshed = name }
 
 func (f *fakeInventory) Details(context.Context, string) ([]domain.Detail, error) {
 	return f.details, f.detailErr
@@ -68,9 +85,61 @@ func (f *fakeAuth) Logout(token string) { f.loggedOut = token }
 
 func (f *fakeAuth) SessionTTL() time.Duration { return time.Hour }
 
+func (f *fakeAuth) ChangePassword(current, next string) (string, error) {
+	switch {
+	case current != "right":
+		return "", auth.ErrWrongPassword
+	case len(next) < auth.MinPasswordLength:
+		return "", auth.ErrWeakPassword
+	}
+	return "fresh-token", nil
+}
+
+type fakeDevices struct {
+	added   custom.Device
+	removed string
+}
+
+func (f *fakeDevices) Add(d custom.Device) (custom.Device, error) {
+	if d.Name == "" {
+		return custom.Device{}, fmt.Errorf("%w: give it a name", custom.ErrInvalid)
+	}
+	d.ID = "custom/abc"
+	f.added = d
+	return d, nil
+}
+
+func (f *fakeDevices) Remove(id string) error {
+	if id != "custom/abc" {
+		return custom.ErrNotFound
+	}
+	f.removed = id
+	return nil
+}
+
+type fakeAlerts struct {
+	settings alerts.Settings
+}
+
+func (f *fakeAlerts) Settings() alerts.Settings { return f.settings }
+
+func (f *fakeAlerts) Update(s alerts.Settings) error {
+	if len(s.Channels) > 0 && s.Channels[0].Type == "pigeon" {
+		return fmt.Errorf("%w: unknown alert type", alerts.ErrInvalid)
+	}
+	f.settings = s
+	return nil
+}
+
+func (f *fakeAlerts) Test(context.Context) []alerts.Result {
+	return []alerts.Result{{Type: "ntfy"}, {Type: "discord", Error: "the service answered 403 Forbidden"}}
+}
+
+var testDevices = &fakeDevices{}
+
 func newTestHandlerWithAuth(inv *fakeInventory, auth *fakeAuth) http.Handler {
 	ui := fstest.MapFS{"index.html": {Data: []byte("<!doctype html><title>Scimitar</title>")}}
-	return NewHandler(inv, auth, ui, Info{Version: "v1.2.3"})
+	return NewHandler(inv, auth, ui, Info{Version: "v1.2.3"}, Options{Devices: testDevices, Alerts: &fakeAlerts{}})
 }
 
 func newTestHandler(inv *fakeInventory) http.Handler {
@@ -98,8 +167,9 @@ func do(t *testing.T, h http.Handler, method, target, contentType, body string) 
 func TestSnapshotJSON(t *testing.T) {
 	updated := time.Date(2026, 11, 12, 9, 0, 0, 0, time.UTC)
 	inv := &fakeInventory{snapshot: core.Snapshot{
-		Devices:   []domain.Device{{ID: "p/guest/1", Name: "immich", Kind: domain.DeviceVM, Provider: "p", Status: domain.StatusUp}},
-		Services:  []domain.Service{{ID: "p/guest/1/immich", Name: "Immich", CatalogID: "immich", DeviceID: "p/guest/1", Status: domain.StatusUnknown}},
+		Devices:   []domain.Device{{ID: "p/guest/1", Name: "immich", Kind: domain.DeviceVM, Provider: "p", Status: domain.StatusUp, Addresses: []string{"10.0.0.5", "fd00::5"}}},
+		Services:  []domain.Service{{ID: "p/guest/1/immich", Name: "Immich", CatalogID: "immich", DeviceID: "p/guest/1", Status: domain.StatusUp, URL: "http://10.0.0.5:2283"}},
+		Events:    []core.Event{{Time: updated, Subject: core.SubjectDevice, ID: "p/guest/1", Name: "immich", Status: domain.StatusUp, Detail: "vm on p"}},
 		Links:     []domain.Link{{From: "p/guest/1", To: "p/node/a", Kind: domain.LinkRunsOn}},
 		Review:    []core.ReviewItem{{Hint: domain.ServiceHint{DeviceID: "p/guest/2", Source: "name", Value: "immich-old"}, CandidateIDs: []string{"immich"}}},
 		Answered:  []core.Answer{{Hint: domain.ServiceHint{DeviceID: "p/guest/3", Source: "tag", Value: "hass-test"}, CatalogID: ""}},
@@ -116,8 +186,9 @@ func TestSnapshotJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]any{
-		"devices":  []any{map[string]any{"id": "p/guest/1", "name": "immich", "kind": "vm", "provider": "p", "status": "up"}},
-		"services": []any{map[string]any{"id": "p/guest/1/immich", "name": "Immich", "catalog_id": "immich", "device_id": "p/guest/1", "status": "unknown"}},
+		"devices":  []any{map[string]any{"id": "p/guest/1", "name": "immich", "kind": "vm", "provider": "p", "status": "up", "address": "10.0.0.5", "custom": false}},
+		"services": []any{map[string]any{"id": "p/guest/1/immich", "name": "Immich", "catalog_id": "immich", "device_id": "p/guest/1", "status": "up", "url": "http://10.0.0.5:2283", "custom_url": false}},
+		"events":   []any{map[string]any{"time": "2026-11-12T09:00:00Z", "subject": "device", "id": "p/guest/1", "name": "immich", "status": "up", "detail": "vm on p"}},
 		"links":    []any{map[string]any{"from": "p/guest/1", "to": "p/node/a", "kind": "runs-on"}},
 		"review": []any{map[string]any{
 			"key": "p/guest/2|name|immich-old", "device_id": "p/guest/2", "source": "name", "value": "immich-old",
@@ -138,7 +209,7 @@ func TestSnapshotJSON(t *testing.T) {
 func TestEmptySnapshotUsesEmptyLists(t *testing.T) {
 	rec := do(t, newTestHandler(&fakeInventory{}), http.MethodGet, "/api/snapshot", "", "")
 	body := rec.Body.String()
-	for _, want := range []string{`"providers":[]`, `"devices":[]`, `"review":[]`, `"answered":[]`, `"errors":{}`, `"updated_at":null`} {
+	for _, want := range []string{`"providers":[]`, `"devices":[]`, `"review":[]`, `"answered":[]`, `"events":[]`, `"errors":{}`, `"updated_at":null`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %s in %s", want, body)
 		}
@@ -147,7 +218,7 @@ func TestEmptySnapshotUsesEmptyLists(t *testing.T) {
 
 func TestInfo(t *testing.T) {
 	rec := do(t, newTestHandler(&fakeInventory{}), http.MethodGet, "/api/info", "", "")
-	if strings.TrimSpace(rec.Body.String()) != `{"version":"v1.2.3"}` {
+	if !strings.HasPrefix(rec.Body.String(), `{"version":"v1.2.3","device_kinds":["router","firewall",`) {
 		t.Fatalf("got %s", rec.Body.String())
 	}
 }
