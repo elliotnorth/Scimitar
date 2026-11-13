@@ -49,7 +49,7 @@ func (a deviceAdder) add(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if signer.PublicKey().Type() != ssh.KeyAlgoRSA && !hasJunos(cfg) {
+	if signer.PublicKey().Type() != ssh.KeyAlgoRSA && !cfg.hasProvider("junos") {
 		// Keys made before Scimitar switched to RSA are not accepted by older Junos.
 		// Nothing uses the key yet, so it is safe to swap.
 		if signer, err = sshkey.Replace(keyPath); err != nil {
@@ -75,7 +75,7 @@ func (a deviceAdder) add(ctx context.Context) error {
 		return err
 	}
 
-	address, fingerprint, err := a.askAddress(ctx)
+	address, fingerprint, err := a.askAddress(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -114,22 +114,32 @@ func (a deviceAdder) add(ctx context.Context) error {
 	return nil
 }
 
-func hasJunos(cfg config) bool {
+// junosAt returns the name of the configured Juniper device at address, if there is one.
+func junosAt(cfg config, address string) (string, bool) {
 	for _, p := range cfg.Providers {
-		if p.Type == "junos" {
-			return true
+		if p.Type != "junos" {
+			continue
+		}
+		var device junos.Config
+		json.Unmarshal(p.Settings, &device)
+		if existing, err := junos.NormalizeAddress(device.Address); err == nil && existing == address {
+			return device.Name, true
 		}
 	}
-	return false
+	return "", false
 }
 
-func (a deviceAdder) askAddress(ctx context.Context) (address, fingerprint string, err error) {
+func (a deviceAdder) askAddress(ctx context.Context, cfg config) (address, fingerprint string, err error) {
 	for {
 		raw, err := a.required("2. Device address (for example 192.168.1.2)")
 		if err != nil {
 			return "", "", err
 		}
 		address, err = junos.NormalizeAddress(raw)
+		if name, added := junosAt(cfg, address); err == nil && added {
+			a.say("%s is already in Scimitar as %s.", hostOnly(address), name)
+			continue
+		}
 		if err == nil {
 			var keyType string
 			fingerprint, keyType, err = a.fetchHostKey(ctx, address)

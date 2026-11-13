@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -190,5 +191,23 @@ func TestAddDeviceReplacesUnusedEd25519Key(t *testing.T) {
 	}
 	if !strings.Contains(ta.ti.out.String(), "authentication ssh-rsa \"ssh-rsa ") {
 		t.Fatalf("old key was not replaced:\n%s", ta.ti.out)
+	}
+}
+
+func TestAddDeviceRefusesAddressAlreadyAdded(t *testing.T) {
+	first := newTestAdder(t, answers("", "10.0.0.2", "y", "", ""))
+	if err := first.add(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	first.prompter.in = bufio.NewReader(strings.NewReader(answers("", "10.0.0.2", "10.0.0.3", "y", "", "second-sw")))
+	if err := first.add(context.Background()); err != nil {
+		t.Fatalf("%v\n%s", err, first.ti.out)
+	}
+	if !strings.Contains(first.ti.out.String(), "10.0.0.2 is already in Scimitar as core-sw.home.lan") {
+		t.Fatalf("no warning about the duplicate:\n%s", first.ti.out)
+	}
+	cfg, _ := loadConfig(first.ti.paths.configFile())
+	if len(cfg.Providers) != 3 {
+		t.Fatalf("providers: %+v", cfg.Providers)
 	}
 }

@@ -29,10 +29,15 @@ func printStatus(out io.Writer, configPath string, paths installPaths) {
 	fmt.Fprintf(out, "  Open:      https://%s\n", net.JoinHostPort(host, port))
 	for _, p := range cfg.Providers {
 		var settings struct {
-			URL string `json:"url"`
+			URL     string `json:"url"`
+			Address string `json:"address"`
 		}
 		json.Unmarshal(p.Settings, &settings)
-		fmt.Fprintf(out, "  Source:    %s at %s\n", p.Type, settings.URL)
+		where := settings.URL
+		if where == "" {
+			where = settings.Address
+		}
+		fmt.Fprintf(out, "  Source:    %s at %s\n", p.Type, where)
 	}
 	fmt.Fprintf(out, "  Data:      %s\n", cfg.DataDir)
 	fmt.Fprintln(out, "\n  Logs:      journalctl -u scimitar -f")

@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var errAborted = errors.New("installation cancelled")
+var errAborted = errors.New("cancelled")
 
 type prompter struct {
 	in  *bufio.Reader
