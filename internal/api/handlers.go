@@ -65,6 +65,25 @@ func (h handlers) review(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h handlers) undoReview(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Key string `json:"key"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	err := h.inv.Undo(req.Key)
+	switch {
+	case errors.Is(err, core.ErrUnknownReviewItem):
+		writeError(w, http.StatusNotFound, err.Error())
+	case err != nil:
+		slog.Error("undoing review decision failed", "err", err)
+		writeError(w, http.StatusInternalServerError, "could not save decision")
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

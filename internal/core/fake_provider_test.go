@@ -14,11 +14,18 @@ type fakeProvider struct {
 	discovery domain.Discovery
 	status    map[string]domain.Status
 	err       error
+	// discoverErr fails discovery only, while status keeps working.
+	discoverErr error
+	discovers   int
 }
 
 func (f *fakeProvider) Name() string { return f.name }
 
 func (f *fakeProvider) Discover(context.Context) (domain.Discovery, error) {
+	f.discovers++
+	if f.discoverErr != nil {
+		return domain.Discovery{}, f.discoverErr
+	}
 	return f.discovery, f.err
 }
 

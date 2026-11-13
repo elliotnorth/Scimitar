@@ -24,6 +24,9 @@ func (f FileDecisions) Load() (Decisions, error) {
 	if err := json.Unmarshal(data, &decisions); err != nil {
 		return nil, err
 	}
+	if decisions == nil {
+		decisions = Decisions{}
+	}
 	return decisions, nil
 }
 

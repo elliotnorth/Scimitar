@@ -13,8 +13,8 @@ func (inv *Inventory) rebuild() {
 		if !ok {
 			continue
 		}
-		if state.err != nil {
-			next.Errors[p.Name()] = state.err.Error()
+		if err := state.err(); err != nil {
+			next.Errors[p.Name()] = err.Error()
 		}
 		for _, d := range state.discovery.Devices {
 			d.Status = currentStatus(d, state)
@@ -27,7 +27,7 @@ func (inv *Inventory) rebuild() {
 	next.Links = resolveLinks(next.Links, next.Devices)
 
 	matched := Match(inv.catalog, hints)
-	matched.applyDecisions(inv.catalog, inv.decisions)
+	next.Answered = matched.applyDecisions(inv.catalog, inv.decisions)
 	for i := range matched.Services {
 		matched.Services[i].Status = serviceStatus(deviceStatus[matched.Services[i].DeviceID])
 	}
@@ -37,7 +37,7 @@ func (inv *Inventory) rebuild() {
 }
 
 func currentStatus(d domain.Device, state *providerState) domain.Status {
-	if state.err != nil {
+	if state.err() != nil {
 		return domain.StatusUnknown
 	}
 	if s, ok := state.status[d.ID]; ok {

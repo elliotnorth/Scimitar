@@ -19,7 +19,11 @@ var (
 	ErrUnknownCatalogEntry = errors.New("no such catalog entry")
 )
 
-func (r *MatchResult) applyDecisions(catalog []CatalogEntry, decisions Decisions) {
+// applyDecisions turns decided review items into services and returns them as
+// answers, so the user can see and undo what they chose.
+func (r *MatchResult) applyDecisions(catalog []CatalogEntry, decisions Decisions) []Answer {
+	var answers []Answer
+	seen := map[string]bool{}
 	undecided := r.Review[:0]
 	for _, item := range r.Review {
 		catalogID, decided := decisions[item.Key()]
@@ -27,12 +31,17 @@ func (r *MatchResult) applyDecisions(catalog []CatalogEntry, decisions Decisions
 			undecided = append(undecided, item)
 			continue
 		}
+		if !seen[item.Key()] {
+			seen[item.Key()] = true
+			answers = append(answers, Answer{Hint: item.Hint, CatalogID: catalogID})
+		}
 		if entry, ok := findEntry(catalog, catalogID); ok {
 			r.addService(item.Hint.DeviceID, entry)
 		}
 	}
 	r.Review = undecided
 	r.pruneConfirmed()
+	return answers
 }
 
 func validateDecision(catalog []CatalogEntry, catalogID string) error {

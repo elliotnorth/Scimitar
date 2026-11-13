@@ -201,3 +201,75 @@ func TestDetailsRoutesToOwningProvider(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+func TestFailedDiscoveryIsRetriedOnStatusRefresh(t *testing.T) {
+	inv, provider := newLabInventory(t, &memoryDecisions{})
+	provider.discoverErr = errUnreachable
+	inv.Discover(context.Background())
+	if s := inv.Snapshot(); len(s.Devices) != 0 || s.Errors["lab"] != "unreachable" {
+		t.Fatalf("after failed discovery: %+v", s)
+	}
+
+	// Status works but discovery still fails: the error must stay visible.
+	inv.RefreshStatus(context.Background())
+	if s := inv.Snapshot(); s.Errors["lab"] != "unreachable" {
+		t.Fatalf("discovery error hidden by a working status check: %+v", s)
+	}
+
+	provider.discoverErr = nil
+	inv.RefreshStatus(context.Background())
+	if s := inv.Snapshot(); len(s.Devices) != 3 || len(s.Errors) != 0 {
+		t.Fatalf("devices did not appear once the source answered: %+v", s)
+	}
+
+	before := provider.discovers
+	inv.RefreshStatus(context.Background())
+	if provider.discovers != before {
+		t.Fatal("status refresh ran discovery although the last one worked")
+	}
+}
+
+func TestUndoPutsItemBackInReview(t *testing.T) {
+	store := &memoryDecisions{}
+	inv, _ := newLabInventory(t, store)
+	inv.Discover(context.Background())
+	key := inv.Snapshot().Review[0].Key()
+	if err := inv.Decide(key, NotAService); err != nil {
+		t.Fatal(err)
+	}
+	s := inv.Snapshot()
+	if len(s.Answered) != 1 || s.Answered[0].Key() != key || s.Answered[0].CatalogID != NotAService {
+		t.Fatalf("answered: %+v", s.Answered)
+	}
+
+	if err := inv.Undo(key); err != nil {
+		t.Fatal(err)
+	}
+	s = inv.Snapshot()
+	if len(s.Review) != 1 || len(s.Answered) != 0 {
+		t.Fatalf("after undo: %+v", s)
+	}
+	if _, kept := store.saved[key]; kept {
+		t.Fatal("undo was not saved")
+	}
+	if err := inv.Undo(key); !errors.Is(err, ErrUnknownReviewItem) {
+		t.Fatalf("second undo: got %v", err)
+	}
+}
+
+func TestUndoKeepsStateWhenSaveFails(t *testing.T) {
+	store := &memoryDecisions{}
+	inv, _ := newLabInventory(t, store)
+	inv.Discover(context.Background())
+	key := inv.Snapshot().Review[0].Key()
+	if err := inv.Decide(key, "nextcloud"); err != nil {
+		t.Fatal(err)
+	}
+	store.saveErr = errors.New("disk full")
+	if err := inv.Undo(key); err == nil {
+		t.Fatal("expected save error")
+	}
+	if s := inv.Snapshot(); len(s.Answered) != 1 || len(s.Services) != 2 {
+		t.Fatalf("undo applied although it was not saved: %+v", s)
+	}
+}

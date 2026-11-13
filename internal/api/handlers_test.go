@@ -20,6 +20,8 @@ type fakeInventory struct {
 	snapshot  core.Snapshot
 	decideErr error
 	decided   [2]string
+	undone    string
+	undoErr   error
 	details   []domain.Detail
 	detailErr error
 }
@@ -33,6 +35,11 @@ func (f *fakeInventory) Catalog() []core.CatalogEntry {
 func (f *fakeInventory) Decide(key, catalogID string) error {
 	f.decided = [2]string{key, catalogID}
 	return f.decideErr
+}
+
+func (f *fakeInventory) Undo(key string) error {
+	f.undone = key
+	return f.undoErr
 }
 
 func (f *fakeInventory) Details(context.Context, string) ([]domain.Detail, error) {
@@ -95,6 +102,7 @@ func TestSnapshotJSON(t *testing.T) {
 		Services:  []domain.Service{{ID: "p/guest/1/immich", Name: "Immich", CatalogID: "immich", DeviceID: "p/guest/1", Status: domain.StatusUnknown}},
 		Links:     []domain.Link{{From: "p/guest/1", To: "p/node/a", Kind: domain.LinkRunsOn}},
 		Review:    []core.ReviewItem{{Hint: domain.ServiceHint{DeviceID: "p/guest/2", Source: "name", Value: "immich-old"}, CandidateIDs: []string{"immich"}}},
+		Answered:  []core.Answer{{Hint: domain.ServiceHint{DeviceID: "p/guest/3", Source: "tag", Value: "hass-test"}, CatalogID: ""}},
 		Providers: []string{"p", "q"},
 		Errors:    map[string]string{"q": "unreachable"},
 		UpdatedAt: updated,
@@ -115,6 +123,9 @@ func TestSnapshotJSON(t *testing.T) {
 			"key": "p/guest/2|name|immich-old", "device_id": "p/guest/2", "source": "name", "value": "immich-old",
 			"candidate_ids": []any{"immich"},
 		}},
+		"answered": []any{map[string]any{
+			"key": "p/guest/3|tag|hass-test", "device_id": "p/guest/3", "source": "tag", "value": "hass-test", "catalog_id": "",
+		}},
 		"providers":  []any{"p", "q"},
 		"errors":     map[string]any{"q": "unreachable"},
 		"updated_at": "2026-11-12T09:00:00Z",
@@ -127,7 +138,7 @@ func TestSnapshotJSON(t *testing.T) {
 func TestEmptySnapshotUsesEmptyLists(t *testing.T) {
 	rec := do(t, newTestHandler(&fakeInventory{}), http.MethodGet, "/api/snapshot", "", "")
 	body := rec.Body.String()
-	for _, want := range []string{`"providers":[]`, `"devices":[]`, `"review":[]`, `"errors":{}`, `"updated_at":null`} {
+	for _, want := range []string{`"providers":[]`, `"devices":[]`, `"review":[]`, `"answered":[]`, `"errors":{}`, `"updated_at":null`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %s in %s", want, body)
 		}
@@ -179,6 +190,30 @@ func TestReviewPassesDecision(t *testing.T) {
 	do(t, newTestHandler(inv), http.MethodPost, "/api/review", "application/json", `{"key":"p/guest/2|name|x","catalog_id":"immich"}`)
 	if inv.decided != [2]string{"p/guest/2|name|x", "immich"} {
 		t.Fatalf("got %v", inv.decided)
+	}
+}
+
+func TestUndoReview(t *testing.T) {
+	cases := []struct {
+		name        string
+		contentType string
+		undoErr     error
+		want        int
+	}{
+		{"undone", "application/json", nil, http.StatusNoContent},
+		{"form post refused", "application/x-www-form-urlencoded", nil, http.StatusUnsupportedMediaType},
+		{"unknown item", "application/json", core.ErrUnknownReviewItem, http.StatusNotFound},
+		{"save failed", "application/json", errors.New("disk full"), http.StatusInternalServerError},
+	}
+	for _, tc := range cases {
+		inv := &fakeInventory{undoErr: tc.undoErr}
+		rec := do(t, newTestHandler(inv), http.MethodPost, "/api/review/undo", tc.contentType, `{"key":"p/guest/2|name|x"}`)
+		if rec.Code != tc.want {
+			t.Errorf("%s: got %d, want %d", tc.name, rec.Code, tc.want)
+		}
+		if tc.want == http.StatusNoContent && inv.undone != "p/guest/2|name|x" {
+			t.Errorf("%s: key not passed: %q", tc.name, inv.undone)
+		}
 	}
 }
 

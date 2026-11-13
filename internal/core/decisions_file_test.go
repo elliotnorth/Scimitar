@@ -44,3 +44,14 @@ func TestFileDecisionsRejectsCorruptFile(t *testing.T) {
 		t.Fatal("expected parse error")
 	}
 }
+
+func TestFileDecisionsNullFileIsEmpty(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "decisions.json")
+	if err := os.WriteFile(path, []byte("null"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := FileDecisions{Path: path}.Load()
+	if err != nil || got == nil {
+		t.Fatalf("got %v, %v; want an empty map that can be written to", got, err)
+	}
+}

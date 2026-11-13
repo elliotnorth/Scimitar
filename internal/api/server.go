@@ -13,6 +13,7 @@ type Inventory interface {
 	Snapshot() core.Snapshot
 	Catalog() []core.CatalogEntry
 	Decide(reviewKey, catalogID string) error
+	Undo(reviewKey string) error
 	Details(ctx context.Context, deviceID string) ([]domain.Detail, error)
 }
 
@@ -31,6 +32,7 @@ func NewHandler(inv Inventory, auth Auth, ui fs.FS, info Info) http.Handler {
 	mux.Handle("GET /api/info", requireSession(auth, h.infoHandler))
 	mux.Handle("GET /api/details", requireSession(auth, h.details))
 	mux.Handle("POST /api/review", requireSession(auth, h.review))
+	mux.Handle("POST /api/review/undo", requireSession(auth, h.undoReview))
 	mux.Handle("GET /", http.FileServerFS(ui))
 	return securityHeaders(mux)
 }

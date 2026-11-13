@@ -37,11 +37,20 @@ type reviewView struct {
 	CandidateIDs []string `json:"candidate_ids"`
 }
 
+type answerView struct {
+	Key       string `json:"key"`
+	DeviceID  string `json:"device_id"`
+	Source    string `json:"source"`
+	Value     string `json:"value"`
+	CatalogID string `json:"catalog_id"`
+}
+
 type snapshotView struct {
 	Devices   []deviceView      `json:"devices"`
 	Services  []serviceView     `json:"services"`
 	Links     []linkView        `json:"links"`
 	Review    []reviewView      `json:"review"`
+	Answered  []answerView      `json:"answered"`
 	Providers []string          `json:"providers"`
 	Errors    map[string]string `json:"errors"`
 	UpdatedAt *time.Time        `json:"updated_at"`
@@ -63,6 +72,7 @@ func toSnapshotView(s core.Snapshot) snapshotView {
 		Services:  make([]serviceView, len(s.Services)),
 		Links:     make([]linkView, len(s.Links)),
 		Review:    make([]reviewView, len(s.Review)),
+		Answered:  make([]answerView, len(s.Answered)),
 		Providers: append([]string{}, s.Providers...),
 		Errors:    s.Errors,
 	}
@@ -83,6 +93,9 @@ func toSnapshotView(s core.Snapshot) snapshotView {
 	}
 	for i, r := range s.Review {
 		v.Review[i] = reviewView{Key: r.Key(), DeviceID: r.Hint.DeviceID, Source: r.Hint.Source, Value: r.Hint.Value, CandidateIDs: r.CandidateIDs}
+	}
+	for i, a := range s.Answered {
+		v.Answered[i] = answerView{Key: a.Key(), DeviceID: a.Hint.DeviceID, Source: a.Hint.Source, Value: a.Hint.Value, CatalogID: a.CatalogID}
 	}
 	return v
 }
