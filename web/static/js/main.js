@@ -22,7 +22,13 @@ applyTheme(currentTheme());
 
 function routeFor(hash) {
   const [, section = "overview", ...rest] = hash.replace(/^#/, "").split("/");
-  return { section: ALIASES[section] || section || "overview", id: rest.length ? decodeURIComponent(rest.join("/")) : "" };
+  let id = rest.join("/");
+  try {
+    id = decodeURIComponent(id);
+  } catch {
+    // A hand-edited link with a stray % is used as it is.
+  }
+  return { section: ALIASES[section] || section || "overview", id };
 }
 
 function createView({ section, id }) {
@@ -102,12 +108,13 @@ async function refresh() {
   try {
     if (!store.catalog.length) store.catalog = await getJSON("api/catalog");
     if (!store.info.version) store.info = await getJSON("api/info");
-    setSnapshot(await getJSON("api/snapshot"));
+    const changed = setSnapshot(await getJSON("api/snapshot"));
     lastError = "";
     showLogin(false);
     renderChrome();
-    if (currentHash() === currentRoute && current) current.update();
-    else mount();
+    // Redrawing an unchanged page would drop keyboard focus and close open menus every few seconds.
+    if (currentHash() !== currentRoute || !current) mount();
+    else if (changed) current.update();
   } catch (err) {
     if (err instanceof LoginRequired) return;
     lastError = err.message;

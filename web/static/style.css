@@ -87,6 +87,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .rows > .row + .row, .rows > .row + .review-item, .rows > .review-item + .review-item, .rows > .review-item + .row { border-top: 1px solid var(--soft); }
 .row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 20px; align-items: center; padding: 12px 20px; transition: background 0.15s; }
+.row:has(> :nth-child(2):last-child) { grid-template-columns: minmax(0, 1fr) auto; }
 a.row:hover { background: var(--hover); }
 .row-main { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-name { font-weight: 500; }
@@ -147,6 +148,8 @@ a.row:hover { background: var(--hover); }
 .review-main { min-width: 0; }
 .review-value { margin: 6px 0 0; padding: 8px 10px; max-height: 7.5em; overflow: auto; border-radius: 6px; background: var(--raise); border: 1px solid var(--soft); font: 12px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .review-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+.row.answered { grid-template-columns: minmax(0, 1fr) auto auto; }
+.row.answered .lnk { font: 12px var(--mono); text-decoration: underline; text-underline-offset: 3px; }
 select { height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--dim); font: 12.5px var(--sans); }
 
 /* settings */
@@ -183,7 +186,7 @@ select { height: 30px; padding: 0 10px; border: 1px solid var(--line); border-ra
 }
 
 @media (max-width: 760px) {
-  .wrap { padding: 0 16px; }
+  .wrap { padding-left: 16px; padding-right: 16px; }
   .hdr { flex-wrap: wrap; height: auto; padding: 12px 0; gap: 8px; }
   .nav { order: 3; flex-basis: 100%; margin-left: -10px; }
   .live { margin-left: auto; }

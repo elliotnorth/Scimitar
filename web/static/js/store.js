@@ -3,11 +3,18 @@ export const store = {
   catalog: [],
   info: { version: "" },
   index: null,
+  signature: "",
 };
 
+// setSnapshot stores the newest snapshot and reports whether anything other
+// than its timestamp changed, so pages are only redrawn when there is news.
 export function setSnapshot(snapshot) {
+  const signature = JSON.stringify({ ...snapshot, updated_at: null });
+  const changed = !store.snapshot || signature !== store.signature;
   store.snapshot = snapshot;
-  store.index = buildIndex(snapshot);
+  store.signature = signature;
+  if (changed) store.index = buildIndex(snapshot);
+  return changed;
 }
 
 function buildIndex(s) {

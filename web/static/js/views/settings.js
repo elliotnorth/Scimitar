@@ -18,7 +18,7 @@ export function settingsView(logout) {
     const active = name === currentTheme();
     const button = el(
       "button",
-      { type: "button", class: small ? "swatch small" : "swatch", "aria-pressed": String(active), title: name, onclick: () => pick(name) },
+      { type: "button", class: small ? "swatch small" : "swatch", "aria-pressed": String(active), title: name, "data-keep": `theme ${name}`, onclick: () => pick(name) },
       el("span", { class: "dots", "aria-hidden": "true" }, ["accent", "up", "down"].map((key) => {
         const dot = el("span", { class: "dot" });
         dot.style.background = colors[key];
@@ -39,7 +39,7 @@ export function settingsView(logout) {
     return el(
       "section",
       {},
-      el("div", { class: "section-bar" }, el("div", { class: "cap" }, "theme ", el("span", { class: "ink" }, currentTheme())), el("button", { class: "lnk", type: "button", onclick: () => pick(randomTheme()) }, "surprise me ↻")),
+      el("div", { class: "section-bar" }, el("div", { class: "cap" }, "theme ", el("span", { class: "ink" }, currentTheme())), el("button", { class: "lnk", type: "button", "data-keep": "surprise", onclick: () => pick(randomTheme()) }, "surprise me ↻")),
       el("div", { class: "swatches" }, featured.map((n) => swatch(n, false))),
       el(
         "div",
@@ -56,6 +56,9 @@ export function settingsView(logout) {
 
   function update() {
     const { providers, errors, devices } = store.snapshot;
+    // The page is rebuilt on every theme pick; keep the theme list scrolled and focused where it was.
+    const scrolled = body.querySelector(".theme-grid")?.scrollTop || 0;
+    const focused = body.contains(document.activeElement) ? document.activeElement.dataset.keep : "";
     body.replaceChildren(
       themeSection(),
       el(
@@ -67,10 +70,10 @@ export function settingsView(logout) {
           providers.map((name) => {
             const error = errors[name];
             const count = devices.filter((d) => d.provider === name).length;
-            return el("div", { class: "row" }, el("span", { class: "row-main" }, el("span", { class: "row-name" }, name), " ", el("span", { class: "mono dim small" }, error || `${count} devices`)), state(error ? "down" : "up"));
+            return el("div", { class: "row" }, el("span", { class: "row-main" }, el("span", { class: "row-name" }, name), " ", el("span", { class: "mono dim small", title: error }, error || `${count} ${count === 1 ? "device" : "devices"}`)), state(error ? "down" : "up"));
           }),
         ),
-        el("p", { class: "dim small" }, "Change sources with ", el("code", {}, "sudo scimitar install"), " on the server."),
+        el("p", { class: "dim small" }, "On the server, add a Juniper device with ", el("code", {}, "sudo scimitar add-device"), " or change Proxmox with ", el("code", {}, "sudo scimitar install"), "."),
       ),
       el(
         "section",
@@ -98,6 +101,8 @@ export function settingsView(logout) {
       ),
       el("section", {}, el("button", { class: "btn", type: "button", onclick: logout }, "log out")),
     );
+    body.querySelector(".theme-grid").scrollTop = scrolled;
+    if (focused) [...body.querySelectorAll("[data-keep]")].find((node) => node.dataset.keep === focused)?.focus();
   }
 
   return { root, update };

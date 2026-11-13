@@ -7,12 +7,34 @@ const SOURCE_LABELS = { name: "its name", tag: "a tag", notes: "its notes" };
 
 export function reviewView(refresh) {
   const list = el("div");
+  const answeredList = el("section");
   const root = el(
     "div",
     { class: "wrap page" },
-    pageTitle("Review", el("p", { class: "dim" }, "Scimitar found these but is not sure what they are. Your answers are remembered.")),
+    pageTitle("Review", el("p", { class: "dim" }, "Scimitar found these but is not sure what they are. Your answers are remembered, and you can undo them.")),
     list,
+    answeredList,
   );
+
+  async function undo(answer) {
+    try {
+      await postJSON("api/review/undo", { key: answer.key });
+      toast(`${deviceName(answer.device_id)} is back in review`);
+    } catch (err) {
+      if (!(err instanceof LoginRequired)) toast(`Could not undo: ${err.message}`, "error");
+    }
+    await refresh();
+  }
+
+  function answeredRow(answer) {
+    return el(
+      "div",
+      { class: "row answered" },
+      el("span", { class: "row-main" }, el("a", { class: "row-name", href: deviceHref(answer.device_id) }, deviceName(answer.device_id)), " ", el("span", { class: "mono dim small" }, answer.value)),
+      el("span", { class: "mono dim small" }, answer.catalog_id ? catalogName(answer.catalog_id) : "not an app"),
+      el("button", { class: "lnk", type: "button", "aria-label": `Undo answer for ${deviceName(answer.device_id)}`, onclick: () => undo(answer) }, "undo"),
+    );
+  }
 
   async function decide(item, catalogID) {
     const device = deviceName(item.device_id);
@@ -53,8 +75,9 @@ export function reviewView(refresh) {
   }
 
   function update() {
-    const { review } = store.snapshot;
+    const { review, answered = [] } = store.snapshot;
     list.replaceChildren(review.length ? panel({ class: "rows" }, review.map(itemRow)) : emptyState("All caught up", "Nothing needs review right now."));
+    answeredList.replaceChildren(...(answered.length ? [el("div", { class: "cap section-cap" }, `answered · ${answered.length}`), panel({ class: "rows" }, answered.map(answeredRow))] : []));
   }
 
   return { root, update };
