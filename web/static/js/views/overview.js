@@ -1,8 +1,9 @@
-import { bar, el, panel } from "../dom.js";
+import { bar, clockTime, el, panel } from "../dom.js";
 import { LOGO, startGlyphs } from "../glyphs.js";
 import { deviceHref, store } from "../store.js";
 
 const BAR_WIDTH = 18;
+const RECENT_SHOWN = 12;
 
 export function overviewView() {
   const fieldNode = el("pre", { class: "field-base", "aria-hidden": "true" });
@@ -11,6 +12,8 @@ export function overviewView() {
   const stats = el("div", { class: "stats" });
   const problems = el("div");
   const problemsSection = el("section", {}, el("h2", { class: "title-2" }, "Problems"), problems);
+  const recent = el("div");
+  const recentSection = el("section", {}, el("h2", { class: "title-2" }, "Recently"), recent);
 
   const root = el(
     "div",
@@ -32,13 +35,13 @@ export function overviewView() {
         ),
       ),
     ),
-    el("div", { class: "wrap page" }, panel({}, stats), problemsSection),
+    el("div", { class: "wrap page" }, panel({}, stats), problemsSection, recentSection),
   );
 
   const glyphs = startGlyphs(fieldNode, bladeNode);
 
   function update() {
-    const { devices, services, review, providers, errors } = store.snapshot;
+    const { devices, services, review, providers, errors, events = [] } = store.snapshot;
     const up = devices.filter((d) => d.status === "up").length;
     const down = devices.filter((d) => d.status === "down");
     const failing = Object.keys(errors);
@@ -58,6 +61,12 @@ export function overviewView() {
     ];
     if (review.length) rows.push(problemRow("warn", "new", `${review.length} ${review.length === 1 ? "app" : "apps"} to confirm`, "found in names, tags and notes", "#/review"));
     problems.replaceChildren(panel({ class: "rows" }, rows.length ? rows : el("div", { class: "row calm" }, el("span", { class: "state up" }, "● ok"), "nothing needs you right now.")));
+
+    recent.replaceChildren(
+      events.length
+        ? panel({ class: "rows" }, events.slice(0, RECENT_SHOWN).map((e) => eventRow(e, services)))
+        : el("p", { class: "dim" }, "Nothing has gone down or come back since Scimitar started keeping track."),
+    );
   }
 
   return { root, update, destroy: glyphs.stop };
@@ -79,6 +88,24 @@ function stat(label, value, total, fraction) {
     el("div", { class: "cap" }, label),
     el("div", { class: "big" }, String(value), total === null ? null : el("span", { class: "faint" }, `/${total}`)),
     fraction === null ? el("div", { class: "bar" }, " ") : el("div", { class: "bar up" }, bar(fraction, BAR_WIDTH)),
+  );
+}
+
+function eventRow(event, services) {
+  const down = event.status === "down";
+  let href = "#/settings";
+  if (event.subject === "device") href = deviceHref(event.id);
+  if (event.subject === "app") {
+    const service = services.find((s) => s.id === event.id);
+    href = service ? deviceHref(service.device_id) : "#/apps";
+  }
+  const what = event.subject === "source" ? (down ? `can't reach ${event.name}` : `${event.name} is reachable again`) : `${event.name} ${down ? "went down" : "came back"}`;
+  return el(
+    "a",
+    { class: "row problem", href },
+    el("span", { class: `state ${down ? "down" : "up"}` }, `● ${down ? "down" : "up"}`),
+    el("span", { class: "row-main" }, what, " ", el("span", { class: "dim" }, event.subject === "source" ? "" : event.detail || "")),
+    el("span", { class: "mono dim small" }, clockTime(new Date(event.time))),
   );
 }
 

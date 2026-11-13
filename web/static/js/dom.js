@@ -31,7 +31,22 @@ export function state(status) {
   return el("span", { class: `state ${status}` }, "● ", status);
 }
 
-const KIND_LABELS = { host: "host", vm: "vm", container: "container", appliance: "appliance" };
+const KIND_LABELS = {
+  "access-point": "access point",
+  nas: "NAS",
+  "single-board": "Raspberry Pi / mini board",
+  nvr: "camera recorder",
+  ups: "UPS",
+  pdu: "power strip (PDU)",
+  iot: "smart device",
+  "smart-hub": "smart home hub",
+  "media-player": "media player",
+  tv: "TV",
+  console: "game console",
+  phone: "phone / tablet",
+  kvm: "remote management (KVM, iDRAC)",
+  host: "hypervisor host",
+};
 
 export function kindLabel(kind) {
   return KIND_LABELS[kind] || kind;
@@ -75,7 +90,22 @@ export function relativeTime(date) {
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.round(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
-  return `${Math.round(minutes / 60)}h ago`;
+  const hours = Math.round(minutes / 60);
+  return hours < 48 ? `${hours}h ago` : `${Math.round(hours / 24)}d ago`;
+}
+
+export function clockTime(date) {
+  return date.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+// openLink is a link to an app's page. Addresses that are not web pages get none.
+export function openLink(url) {
+  if (!/^https?:/.test(url || "")) return null;
+  return el("a", { class: "lnk mono small", href: url, target: "_blank", rel: "noopener noreferrer" }, "open ↗");
+}
+
+export function textInput(attrs) {
+  return el("input", { type: "text", class: "input", autocomplete: "off", spellcheck: "false", ...attrs });
 }
 
 export function byName(a, b) {

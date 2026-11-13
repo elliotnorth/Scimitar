@@ -1,8 +1,8 @@
-import { byName, chips, el, emptyState, matches, pageTitle, panel, searchBox, state } from "../dom.js";
+import { byName, chips, el, emptyState, matches, openLink, pageTitle, panel, searchBox, state } from "../dom.js";
 import { deviceHref, deviceName, parentName, store } from "../store.js";
 
 const filters = { query: "", status: "" };
-const STATUS_OPTIONS = [["", "all"], ["down", "down"], ["unknown", "unknown"]];
+const STATUS_OPTIONS = [["", "all"], ["up", "up"], ["down", "down"], ["unknown", "unknown"]];
 
 export function appsView() {
   const results = el("div");
@@ -10,7 +10,7 @@ export function appsView() {
   const root = el(
     "div",
     { class: "wrap page" },
-    pageTitle("Apps", el("p", { class: "dim" }, "An app shows as down when the device it runs on is down.")),
+    pageTitle("Apps", el("p", { class: "dim" }, "Scimitar checks each app at its address. An app with no address stays unknown until you set one on its device page.")),
     el(
       "div",
       { class: "toolbar" },
@@ -48,10 +48,10 @@ export function appsView() {
         { class: "rows" },
         shown.map((s) =>
           el(
-            "a",
-            { class: "row", href: deviceHref(s.device_id) },
-            el("span", { class: "row-main" }, el("span", { class: "row-name" }, s.name), " ", el("span", { class: "mono dim small" }, `on ${deviceName(s.device_id)}`)),
-            el("span", { class: "mono dim small hide-sm" }, parentName(s.device_id)),
+            "div",
+            { class: "row three" },
+            el("span", { class: "row-main" }, el("a", { class: "row-name", href: deviceHref(s.device_id) }, s.name), " ", el("span", { class: "mono dim small" }, `on ${deviceName(s.device_id)}`)),
+            openLink(s.url) || el("a", { class: "lnk mono small", href: deviceHref(s.device_id) }, s.url ? "" : "set address"),
             state(s.status),
           ),
         ),

@@ -38,7 +38,7 @@ function createView({ section, id }) {
     case "apps":
       return appsView();
     case "devices":
-      return id ? deviceView(id) : devicesView();
+      return id ? deviceView(id, refresh) : devicesView(refresh);
     case "review":
       return reviewView(refresh);
     case "settings":

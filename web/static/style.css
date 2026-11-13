@@ -169,8 +169,31 @@ select { height: 30px; padding: 0 10px; border: 1px solid var(--line); border-ra
 .login-card p { margin: 0; }
 .login-card .title-2 { margin: 0; }
 .login-logo { margin: 0 0 8px; font: 6px/1 var(--ascii); color: var(--accent); overflow: hidden; }
-.field { display: grid; gap: 6px; }
+.field { display: grid; gap: 6px; min-width: 0; }
 .field input { height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--ink); font: inherit; }
+
+/* forms */
+.input { width: 100%; min-width: 0; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--ink); font: 13.5px var(--sans); }
+.input::placeholder { color: var(--faint); }
+.input:hover { border-color: var(--faint); }
+.form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; max-width: 720px; }
+.form p { margin: 0; }
+.form-wide { grid-column: 1 / -1; }
+.form-wide.narrow { max-width: calc(50% - 10px); }
+.form-stack { display: grid; gap: 16px; }
+.form-stack p { margin: 0; }
+.row-actions { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.danger { border-color: var(--down); color: var(--down); }
+.alert-row { display: grid; grid-template-columns: 170px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.alert-result { grid-column: 1 / -1; white-space: normal; overflow-wrap: anywhere; }
+.checks { display: flex; align-items: center; gap: 8px 20px; flex-wrap: wrap; }
+.check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.check input { width: 15px; height: 15px; accent-color: var(--accent); }
+details summary { cursor: pointer; }
+details p { margin: 10px 0 0; }
+.row.three { grid-template-columns: minmax(0, 1fr) auto auto; }
+.row.editing { grid-template-columns: auto minmax(0, 1fr) auto; }
 .form-error { min-height: 1.4em; color: var(--down); font-size: 13px; }
 
 .foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 24px 0 32px; border-top: 1px solid var(--soft); }
@@ -198,6 +221,11 @@ select { height: 30px; padding: 0 10px; border: 1px solid var(--line); border-ra
   .row.problem { grid-template-columns: 64px minmax(0, 1fr); }
   .row.problem > :last-child { display: none; }
   .review-item { grid-template-columns: 1fr; }
+  .form { grid-template-columns: 1fr; }
+  .form-wide.narrow { max-width: none; }
+  .alert-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .alert-row .input[type="text"] { grid-column: 1 / -1; grid-row: 2; }
+  .row.editing { grid-template-columns: 1fr; }
   .review-actions { justify-content: flex-start; }
   .kv { grid-template-columns: 100px minmax(0, 1fr); }
   .hide-sm { display: none; }

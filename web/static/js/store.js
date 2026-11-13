@@ -1,7 +1,7 @@
 export const store = {
   snapshot: null,
   catalog: [],
-  info: { version: "" },
+  info: { version: "", device_kinds: [] },
   index: null,
   signature: "",
 };
